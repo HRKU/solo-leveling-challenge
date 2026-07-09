@@ -1,6 +1,6 @@
 # Solo Leveling Challenge
 
-A gamified fitness-challenge tracker for a friend group, replacing a shared Excel sheet. Log a daily check-in (workout, water, sleep, steps, protein, calories) and a weekly weigh-in; your consistency and effort convert into XP, a level, and a Hunter rank (E → S), all visible on a shared leaderboard.
+A gamified fitness-challenge tracker for a friend group, replacing a shared Excel sheet. Log a daily check-in (push-ups, pull-ups, sit-ups, crunches, water, sleep, steps, protein, calories) and a weekly weigh-in; your consistency and effort convert into XP, a level, and a Hunter rank (E → S), all visible on a shared leaderboard.
 
 Themed after *Solo Leveling* — daily targets are personalized per person (BMR/TDEE-based), your score is computed server-side so it can't be gamed, and a streak survives as long as you log *something* each day, even a rough one.
 
@@ -42,8 +42,8 @@ supabase/migrations/    SQL schema, RLS policies, and the profile-creation trigg
 ### How scoring works (see `lib/xp.ts` and `lib/targets.ts`)
 
 - Daily targets (calories, protein, water) are computed per person from age/sex/height/weight/goal via Mifflin-St Jeor BMR × activity factor. Sleep (8h) and steps (8,000) are fixed for everyone.
-- A day's XP is a 0–100 score: workout done (40 pts) > water (24) > sleep + steps (10 + 10) > protein + calories (8 + 8), with partial credit for hitting a fraction of a numeric target. It's computed **server-side only** in `app/actions/daily-checkins.ts` — never trust a client-submitted XP value.
-- Level requires 26×N more XP each level; ranks are E (1–3), D (4–7), C (8–12), B (13–17), A (18–23), S (24+).
+- A day's XP = **reps (uncapped)** + water/sleep/steps/protein/calories (capped, partial credit for hitting a fraction of target). Reps are scored per exercise, no daily ceiling: push-ups ×1, pull-ups ×2, sit-ups ×0.75, crunches ×0.5 — more reps always means more XP. The other categories stay capped at water (24) > sleep + steps (10 + 10) > protein + calories (8 + 8). It's computed **server-side only** in `app/actions/daily-checkins.ts` — never trust a client-submitted XP value.
+- Level requires 52×N more XP each level; ranks are E (1–3), D (4–7), C (8–12), B (13–17), A (18–23), S (24+). A genuinely high-volume day can push well past what the old flat-scoring model topped out at — that's intentional; grinding is meant to be rewarded without a ceiling.
 - A streak only breaks if a day has **no check-in row at all** — a logged-but-rough day still counts.
 
 ## First-time setup
@@ -71,7 +71,7 @@ npm install
 ### 3. Apply the database schema
 
 1. In the Supabase dashboard, open **SQL Editor → New query**.
-2. Paste the full contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) and run it.
+2. Paste and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then do the same for [`supabase/migrations/0002_exercise_reps.sql`](supabase/migrations/0002_exercise_reps.sql) (adds the per-exercise rep-count columns).
 
 This creates the `profiles`, `daily_checkins`, and `weekly_checkins` tables, all Row Level Security policies, and the trigger that auto-creates a profile row on signup.
 

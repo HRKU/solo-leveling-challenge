@@ -48,9 +48,12 @@ export async function upsertDailyCheckin(
     goalType: profile.goal_type,
   })
 
-  const workoutDone = formData.get('workoutDone') === 'on'
   const workoutType = (formData.get('workoutType') as string) || null
   const durationMinutes = formData.get('durationMinutes') ? Number(formData.get('durationMinutes')) : null
+  const pushups = formData.get('pushups') ? Number(formData.get('pushups')) : null
+  const pullups = formData.get('pullups') ? Number(formData.get('pullups')) : null
+  const situps = formData.get('situps') ? Number(formData.get('situps')) : null
+  const crunches = formData.get('crunches') ? Number(formData.get('crunches')) : null
   const calories = formData.get('calories') ? Number(formData.get('calories')) : null
   const proteinG = formData.get('proteinG') ? Number(formData.get('proteinG')) : null
   const waterMl = formData.get('waterMl') ? Number(formData.get('waterMl')) : null
@@ -58,11 +61,22 @@ export async function upsertDailyCheckin(
   const steps = formData.get('steps') ? Number(formData.get('steps')) : null
   const notes = (formData.get('notes') as string) || null
 
+  // Derived, not client-trusted for scoring purposes — just a convenience
+  // flag for "did something happen today" beyond the rep counts themselves.
+  const workoutDone = Boolean(
+    (pushups && pushups > 0) ||
+      (pullups && pullups > 0) ||
+      (situps && situps > 0) ||
+      (crunches && crunches > 0) ||
+      workoutType ||
+      (durationMinutes && durationMinutes > 0)
+  )
+
   // score_xp is computed here, server-side, from raw inputs + personalized
   // targets — never read from the client, never rendered as an editable
   // form field. This is the entire trust boundary for the scoring system.
   const scoreXp = calculateDailyXP(
-    { workoutDone, waterMl, sleepHours, steps, proteinG, calories },
+    { pushups, pullups, situps, crunches, waterMl, sleepHours, steps, proteinG, calories },
     targets
   )
 
@@ -75,6 +89,10 @@ export async function upsertDailyCheckin(
       workout_done: workoutDone,
       workout_type: workoutType,
       duration_minutes: durationMinutes,
+      pushups,
+      pullups,
+      situps,
+      crunches,
       calories,
       protein_g: proteinG,
       water_ml: waterMl,

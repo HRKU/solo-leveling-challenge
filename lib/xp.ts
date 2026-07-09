@@ -3,7 +3,10 @@ import type { DailyTargets } from '@/lib/targets'
 export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
 
 export interface DailyCheckinInput {
-  workoutDone: boolean
+  pushups: number | null
+  pullups: number | null
+  situps: number | null
+  crunches: number | null
   waterMl: number | null
   sleepHours: number | null
   steps: number | null
@@ -11,22 +14,56 @@ export interface DailyCheckinInput {
   calories: number | null
 }
 
-// One uniform rule for every numeric sub-item: linear credit capped at
-// hitting/exceeding target, no bonus for overshooting.
+// Points per rep — uncapped, no daily ceiling. Pull-ups are weighted highest
+// since a comparable rep is much harder to produce than a pushup/situp/crunch.
+export const REP_WEIGHTS = {
+  pushups: 1,
+  pullups: 2,
+  situps: 0.75,
+  crunches: 0.5,
+} as const
+
+// A "solid single day" reference per exercise — used only to color the
+// calendar's workout dot (hit/partial/miss) and to show a suggested number in
+// the check-in form. It is NOT a cap: logging beyond this keeps earning XP.
+export const REP_REFERENCE = {
+  pushups: 30,
+  pullups: 10,
+  situps: 30,
+  crunches: 25,
+} as const
+
+const REP_REFERENCE_MAX =
+  REP_REFERENCE.pushups * REP_WEIGHTS.pushups +
+  REP_REFERENCE.pullups * REP_WEIGHTS.pullups +
+  REP_REFERENCE.situps * REP_WEIGHTS.situps +
+  REP_REFERENCE.crunches * REP_WEIGHTS.crunches
+
+// One uniform rule for every numeric sub-item apart from reps: linear credit
+// capped at hitting/exceeding target, no bonus for overshooting.
 function ratio(value: number | null | undefined, target: number): number {
   if (target <= 0) return 0
   return Math.min(Math.max(value ?? 0, 0) / target, 1)
 }
 
+function repPoints(input: DailyCheckinInput): number {
+  return (
+    Math.max(input.pushups ?? 0, 0) * REP_WEIGHTS.pushups +
+    Math.max(input.pullups ?? 0, 0) * REP_WEIGHTS.pullups +
+    Math.max(input.situps ?? 0, 0) * REP_WEIGHTS.situps +
+    Math.max(input.crunches ?? 0, 0) * REP_WEIGHTS.crunches
+  )
+}
+
 /**
- * The day's score IS the day's XP. Point weights strictly decrease by
- * priority: workout (40) > water (24) > sleep+steps (10+10) > nutrition (8+8).
- * Missing calories simply contributes 0 — no penalty beyond not earning
- * those points.
+ * The day's score IS the day's XP. Reps are uncapped and dominate the
+ * priority order by design (more reps always means more XP); water, sleep,
+ * steps, protein, and calories stay capped against personalized targets —
+ * same partial-credit style as before.
  */
 export function calculateDailyXP(input: DailyCheckinInput, targets: DailyTargets): number {
   const points =
-    (input.workoutDone ? 40 : 0) +
+    repPoints(input) +
     24 * ratio(input.waterMl, targets.waterTarget) +
     10 * ratio(input.sleepHours, targets.sleepTarget) +
     10 * ratio(input.steps, targets.stepsTarget) +
@@ -36,9 +73,14 @@ export function calculateDailyXP(input: DailyCheckinInput, targets: DailyTargets
   return Math.round(points)
 }
 
-// Rescaled for a 0-100/day ceiling: each level costs 26 more XP than the last.
+// Rescaled for uncapped rep scoring (a strong workout day alone can land
+// ~85-155+ points, vs the old flat-40 ceiling): each level costs 52 more XP
+// than the last. Calibrated so a consistent logger still lands around C rank
+// and a genuine grinder around B rank in a month, same as before — but truly
+// exceptional volume can now push into A/S within a single month, which is
+// the point of going uncapped.
 export function cumulativeXpForLevel(level: number): number {
-  return 13 * level * (level + 1)
+  return 26 * level * (level + 1)
 }
 
 export function levelForTotalXp(totalXp: number): number {
@@ -132,9 +174,10 @@ function statusFromRatio(earned: number, max: number): HabitStatus {
 }
 
 /**
- * Collapses the 6 scored inputs into 4 priority-ordered habit dots for the
- * calendar view: Workout (most prominent) -> Water -> Sleep & Steps ->
- * Nutrition (least prominent).
+ * Collapses the scored inputs into 4 priority-ordered habit dots for the
+ * calendar view: Workout (most prominent, uncapped reps) -> Water -> Sleep &
+ * Steps -> Nutrition (least prominent). The workout dot's status is colored
+ * against REP_REFERENCE for readability, but its point total is never capped.
  */
 export function buildDayHabitBreakdown(
   date: string,
@@ -147,7 +190,7 @@ export function buildDayHabitBreakdown(
       hasCheckin: false,
       score: 0,
       habits: [
-        { key: 'workout', label: 'Workout', priority: 1, status: 'miss', pointsEarned: 0, pointsMax: 40 },
+        { key: 'workout', label: 'Workout', priority: 1, status: 'miss', pointsEarned: 0, pointsMax: REP_REFERENCE_MAX },
         { key: 'water', label: 'Water', priority: 2, status: 'miss', pointsEarned: 0, pointsMax: 24 },
         { key: 'sleepSteps', label: 'Sleep & Steps', priority: 3, status: 'miss', pointsEarned: 0, pointsMax: 20 },
         { key: 'nutrition', label: 'Nutrition', priority: 4, status: 'miss', pointsEarned: 0, pointsMax: 16 },
@@ -155,7 +198,7 @@ export function buildDayHabitBreakdown(
     }
   }
 
-  const workoutPoints = checkin.workoutDone ? 40 : 0
+  const workoutPoints = repPoints(checkin)
   const waterPoints = 24 * ratio(checkin.waterMl, targets.waterTarget)
   const sleepStepsPoints =
     10 * ratio(checkin.sleepHours, targets.sleepTarget) + 10 * ratio(checkin.steps, targets.stepsTarget)
@@ -174,9 +217,9 @@ export function buildDayHabitBreakdown(
         key: 'workout',
         label: 'Workout',
         priority: 1,
-        status: checkin.workoutDone ? 'hit' : 'miss',
-        pointsEarned: workoutPoints,
-        pointsMax: 40,
+        status: statusFromRatio(Math.min(workoutPoints, REP_REFERENCE_MAX), REP_REFERENCE_MAX),
+        pointsEarned: Math.round(workoutPoints),
+        pointsMax: Math.round(REP_REFERENCE_MAX),
       },
       {
         key: 'water',

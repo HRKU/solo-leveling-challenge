@@ -9,7 +9,10 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function toDailyCheckinInput(checkin: DailyCheckin): DailyCheckinInput {
   return {
-    workoutDone: checkin.workout_done,
+    pushups: checkin.pushups,
+    pullups: checkin.pullups,
+    situps: checkin.situps,
+    crunches: checkin.crunches,
     waterMl: checkin.water_ml,
     sleepHours: checkin.sleep_hours,
     steps: checkin.steps,

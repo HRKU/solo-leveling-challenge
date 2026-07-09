@@ -28,6 +28,10 @@ export interface DailyCheckin {
   workout_done: boolean
   workout_type: string | null
   duration_minutes: number | null
+  pushups: number | null
+  pullups: number | null
+  situps: number | null
+  crunches: number | null
   calories: number | null
   protein_g: number | null
   water_ml: number | null
