@@ -105,10 +105,10 @@ Open [http://localhost:3000](http://localhost:3000), sign up, complete onboardin
 
 This project deploys to Vercel. Two ways to do it:
 
-- **Git-connected (recommended)**: the Vercel project is connected to this GitHub repo — pushing to `master` triggers an automatic deploy. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` under the Vercel project's **Settings → Environment Variables** first.
+- **Git-connected (recommended)**: the Vercel project is connected to this GitHub repo — pushing to `main` (the default/production branch) triggers an automatic deploy. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` under the Vercel project's **Settings → Environment Variables** first, and make sure **Settings → Git → Production Branch** is set to `main`.
 - **Manual CLI deploy**: `npx vercel --prod` from the project root (requires `npx vercel login` once).
 
 ## Branches
 
-- `master` — stable, deployed branch.
-- `dev` — active development branch for work in progress before it merges to `master`.
+- `main` — default, stable, deployed branch. This is what Vercel builds from.
+- `dev` — active development branch for work in progress before it merges to `main`.
