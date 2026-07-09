@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { calculateDailyTargets } from '@/lib/targets'
 import { DailyCheckinForm } from '@/components/DailyCheckinForm'
 import { notFound, redirect } from 'next/navigation'
@@ -25,22 +25,17 @@ export default async function BackfillCheckinPage({ params }: { params: Promise<
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user!.id)
-    .single<Profile>()
-
-  const { data: checkin } = await supabase
-    .from('daily_checkins')
-    .select('*')
-    .eq('user_id', user!.id)
-    .eq('checkin_date', date)
-    .maybeSingle<DailyCheckin>()
+  const [{ data: profile }, { data: checkin }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId!).single<Profile>(),
+    supabase
+      .from('daily_checkins')
+      .select('*')
+      .eq('user_id', userId!)
+      .eq('checkin_date', date)
+      .maybeSingle<DailyCheckin>(),
+  ])
 
   const targets = calculateDailyTargets({
     age: profile!.age!,

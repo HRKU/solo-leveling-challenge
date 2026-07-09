@@ -1,25 +1,24 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { WeightTrendChart } from '@/components/WeightTrendChart'
 import type { Profile, WeeklyCheckin } from '@/lib/types'
 
 export default async function ProgressPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('starting_weight_kg, target_weight_kg, goal_type')
-    .eq('id', user!.id)
-    .single<Pick<Profile, 'starting_weight_kg' | 'target_weight_kg' | 'goal_type'>>()
-
-  const { data: checkins } = await supabase
-    .from('weekly_checkins')
-    .select('*')
-    .eq('user_id', user!.id)
-    .order('week_start_date', { ascending: true })
-    .returns<WeeklyCheckin[]>()
+  const [{ data: profile }, { data: checkins }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('starting_weight_kg, target_weight_kg, goal_type')
+      .eq('id', userId!)
+      .single<Pick<Profile, 'starting_weight_kg' | 'target_weight_kg' | 'goal_type'>>(),
+    supabase
+      .from('weekly_checkins')
+      .select('*')
+      .eq('user_id', userId!)
+      .order('week_start_date', { ascending: true })
+      .returns<WeeklyCheckin[]>(),
+  ])
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">

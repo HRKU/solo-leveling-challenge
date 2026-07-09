@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { QuestsList } from '@/components/QuestsList'
 import type { Challenge, ChallengeCompletion, Profile } from '@/lib/types'
 
@@ -9,9 +9,7 @@ function currentMonthStart(): string {
 
 export default async function QuestsPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
 
   const startDate = currentMonthStart()
 
@@ -48,7 +46,7 @@ export default async function QuestsPage() {
         challenges={challenges ?? []}
         completions={completions ?? []}
         members={members ?? []}
-        currentUserId={user!.id}
+        currentUserId={userId!}
       />
     </div>
   )

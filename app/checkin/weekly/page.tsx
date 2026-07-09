@@ -1,17 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { WeeklyCheckinForm } from '@/components/WeeklyCheckinForm'
 import type { Profile } from '@/lib/types'
 
 export default async function WeeklyCheckinPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('current_weight_kg')
-    .eq('id', user!.id)
+    .eq('id', userId!)
     .single<Pick<Profile, 'current_weight_kg'>>()
 
   return (

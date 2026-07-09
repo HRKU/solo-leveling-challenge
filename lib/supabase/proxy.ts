@@ -75,5 +75,26 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Pass the already-verified user id down to Server Components via a
+  // *request* header (not a response header — those aren't visible to the
+  // render pipeline, only to the browser), so pages can read it directly
+  // instead of calling supabase.auth.getUser() a second time. That call
+  // always makes a fresh network round-trip to the Auth server, and doing
+  // it twice per navigation (once here, once per page) was a real chunk of
+  // the ~1s+ this proxy was adding to every route change. RLS on the actual
+  // data queries is unaffected either way — auth.uid() is independently
+  // verified by PostgREST from the request's cookies regardless of this
+  // header's value.
+  if (user) {
+    request.headers.set('x-user-id', user.id)
+    const responseWithUserHeader = NextResponse.next({ request })
+    // Preserve any refreshed session cookies Supabase already queued onto
+    // supabaseResponse via the setAll callback above.
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      responseWithUserHeader.cookies.set(cookie)
+    })
+    return responseWithUserHeader
+  }
+
   return supabaseResponse
 }

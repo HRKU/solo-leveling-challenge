@@ -1,12 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { Leaderboard } from '@/components/Leaderboard'
 import type { Profile } from '@/lib/types'
 
 export default async function LeaderboardPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
 
   const { data: profiles } = await supabase
     .from('profiles')
@@ -18,7 +16,7 @@ export default async function LeaderboardPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">
       <h1 className="text-xl font-bold sm:text-2xl">Leaderboard</h1>
-      <Leaderboard profiles={profiles ?? []} currentUserId={user!.id} />
+      <Leaderboard profiles={profiles ?? []} currentUserId={userId!} />
     </div>
   )
 }
