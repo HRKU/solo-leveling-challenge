@@ -52,3 +52,24 @@ export interface WeeklyCheckin {
   created_at: string
   updated_at: string
 }
+
+export interface Challenge {
+  id: string
+  creator_id: string
+  title: string
+  description: string | null
+  xp_reward: number
+  start_date: string
+  end_date: string
+  created_at: string
+}
+
+export interface ChallengeCompletion {
+  id: string
+  challenge_id: string
+  user_id: string
+  completed: boolean
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}

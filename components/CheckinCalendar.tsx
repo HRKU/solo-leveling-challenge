@@ -64,9 +64,11 @@ export function CheckinCalendar({
             return (
               <DayCell
                 key={dateStr}
+                date={dateStr}
                 dayNumber={day.getDate()}
                 breakdown={breakdown}
                 isToday={dateStr === today}
+                isFuture={dateStr > today}
               />
             )
           })}

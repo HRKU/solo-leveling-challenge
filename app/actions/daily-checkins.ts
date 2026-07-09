@@ -2,12 +2,17 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { calculateDailyTargets } from '@/lib/targets'
-import { calculateDailyXP, computeNextStreak, levelForTotalXp, rankForLevel } from '@/lib/xp'
+import { calculateDailyXP, computeNextStreak } from '@/lib/xp'
+import { resumTotalXp } from '@/lib/xp-resum'
 import { revalidatePath } from 'next/cache'
 
 export interface CheckinFormState {
   error?: string
   success?: boolean
+}
+
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10)
 }
 
 export async function upsertDailyCheckin(
@@ -39,6 +44,18 @@ export async function upsertDailyCheckin(
   ) {
     return { error: 'Please finish onboarding first.' }
   }
+
+  const today = todayUtc()
+  // Which day this entry is for — defaults to today so the dashboard form
+  // (which doesn't pass a date) keeps working unchanged. Safe to trust from
+  // the client: it only selects which row gets written, not how many points
+  // it's worth (score is still computed server-side below regardless of
+  // date). The only guardrail that matters is rejecting the future.
+  const date = (formData.get('date') as string) || today
+  if (date > today) {
+    return { error: "Can't log a day that hasn't happened yet." }
+  }
+  const isToday = date === today
 
   const targets = calculateDailyTargets({
     age: profile.age,
@@ -83,12 +100,10 @@ export async function upsertDailyCheckin(
     targets
   )
 
-  const today = new Date().toISOString().slice(0, 10)
-
   const { error: upsertError } = await supabase.from('daily_checkins').upsert(
     {
       user_id: user.id,
-      checkin_date: today,
+      checkin_date: date,
       workout_done: workoutDone,
       workout_type: workoutType,
       duration_minutes: durationMinutes,
@@ -111,29 +126,22 @@ export async function upsertDailyCheckin(
     return { error: upsertError.message }
   }
 
-  const nextStreak = computeNextStreak(profile.last_log_date, today, profile.current_streak)
+  // Backfilled (non-today) entries are pure historical record-keeping — they
+  // count toward total_xp below but never touch the streak, which only ever
+  // moves based on real-time logging. This is what makes it impossible to
+  // fake/repair a streak by backfilling old days.
+  const profileUpdate: Record<string, unknown> = {}
+  if (isToday) {
+    profileUpdate.current_streak = computeNextStreak(profile.last_log_date, today, profile.current_streak)
+    profileUpdate.last_log_date = today
+  }
 
-  // Self-healing: total_xp is re-summed from all checkins rather than
-  // incrementally adjusted, so a prior partial failure can't leave it stale.
-  const { data: allCheckins } = await supabase
-    .from('daily_checkins')
-    .select('score_xp')
-    .eq('user_id', user.id)
+  const { totalXp, level, rank } = await resumTotalXp(supabase, user.id)
+  profileUpdate.total_xp = totalXp
+  profileUpdate.level = level
+  profileUpdate.rank = rank
 
-  const totalXp = (allCheckins ?? []).reduce((sum, c) => sum + c.score_xp, 0)
-  const level = levelForTotalXp(totalXp)
-  const rank = rankForLevel(level)
-
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({
-      total_xp: totalXp,
-      level,
-      rank,
-      current_streak: nextStreak,
-      last_log_date: today,
-    })
-    .eq('id', user.id)
+  const { error: profileError } = await supabase.from('profiles').update(profileUpdate).eq('id', user.id)
 
   if (profileError) {
     return { error: profileError.message }
@@ -142,6 +150,7 @@ export async function upsertDailyCheckin(
   revalidatePath('/')
   revalidatePath('/leaderboard')
   revalidatePath('/calendar')
+  revalidatePath(`/checkin/${date}`)
 
   return { success: true }
 }

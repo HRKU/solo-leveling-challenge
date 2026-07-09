@@ -37,42 +37,52 @@ function RepField({
   defaultValue: number | null | undefined
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor={id} className="whitespace-nowrap">
-        {label}
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id} className="flex items-baseline justify-between">
+        <span>{label}</span>
+        <span className="text-xs font-normal text-muted-foreground">
+          {weight} pt/rep · try {suggested}+
+        </span>
       </Label>
-      <span className="text-xs font-normal text-muted-foreground">
-        {weight} pt/rep · try {suggested}+
-      </span>
       <Input id={id} name={id} type="number" inputMode="numeric" min={0} defaultValue={defaultValue ?? ''} />
     </div>
   )
 }
 
 export function DailyCheckinForm({
-  todayCheckin,
+  date,
+  isToday,
+  checkin,
   targets,
 }: {
-  todayCheckin: DailyCheckin | null
+  date: string
+  isToday: boolean
+  checkin: DailyCheckin | null
   targets: DailyTargets
 }) {
   const [state, action, pending] = useActionState(upsertDailyCheckin, undefined)
 
   useEffect(() => {
-    if (state?.success) toast.success("Today's check-in saved.")
+    if (state?.success) toast.success(isToday ? "Today's check-in saved." : `Check-in for ${date} saved.`)
     if (state?.error) toast.error(state.error)
-  }, [state])
+  }, [state, date, isToday])
+
+  const titleVerb = checkin ? 'Edit' : 'Log'
+  const titleWhen = isToday ? "today's" : date
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-heading">{todayCheckin ? "Edit today's check-in" : "Today's check-in"}</CardTitle>
+        <CardTitle className="font-heading">
+          {titleVerb} {titleWhen} check-in
+        </CardTitle>
         <CardDescription>
           Targets: {(targets.waterTarget / 1000).toFixed(1)}L water · {targets.sleepTarget}h sleep · {targets.stepsTarget} steps ·{' '}
           {targets.proteinTarget}g protein · {targets.calorieTarget} kcal
         </CardDescription>
       </CardHeader>
       <form action={action}>
+        <input type="hidden" name="date" value={date} />
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-3.5">
             <div className="flex items-center gap-2">
@@ -85,28 +95,28 @@ export function DailyCheckinForm({
                 label="Push-ups"
                 weight={REP_WEIGHTS.pushups}
                 suggested={REP_REFERENCE.pushups}
-                defaultValue={todayCheckin?.pushups}
+                defaultValue={checkin?.pushups}
               />
               <RepField
                 id="pullups"
                 label="Pull-ups"
                 weight={REP_WEIGHTS.pullups}
                 suggested={REP_REFERENCE.pullups}
-                defaultValue={todayCheckin?.pullups}
+                defaultValue={checkin?.pullups}
               />
               <RepField
                 id="situps"
                 label="Sit-ups"
                 weight={REP_WEIGHTS.situps}
                 suggested={REP_REFERENCE.situps}
-                defaultValue={todayCheckin?.situps}
+                defaultValue={checkin?.situps}
               />
               <RepField
                 id="crunches"
                 label="Crunches"
                 weight={REP_WEIGHTS.crunches}
                 suggested={REP_REFERENCE.crunches}
-                defaultValue={todayCheckin?.crunches}
+                defaultValue={checkin?.crunches}
               />
             </div>
           </div>
@@ -116,7 +126,7 @@ export function DailyCheckinForm({
               <FieldLabel icon={Dumbbell} htmlFor="workoutType">
                 Other activity — optional
               </FieldLabel>
-              <Input id="workoutType" name="workoutType" placeholder="e.g. 5k run" defaultValue={todayCheckin?.workout_type ?? ''} />
+              <Input id="workoutType" name="workoutType" placeholder="e.g. 5k run" defaultValue={checkin?.workout_type ?? ''} />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel icon={Clock} htmlFor="durationMinutes">
@@ -128,7 +138,7 @@ export function DailyCheckinForm({
                 type="number"
                 inputMode="numeric"
                 min={0}
-                defaultValue={todayCheckin?.duration_minutes ?? ''}
+                defaultValue={checkin?.duration_minutes ?? ''}
               />
             </div>
           </div>
@@ -143,7 +153,7 @@ export function DailyCheckinForm({
                 inputMode="decimal"
                 min={0}
                 step="0.1"
-                defaultValue={todayCheckin?.water_ml != null ? todayCheckin.water_ml / 1000 : ''}
+                defaultValue={checkin?.water_ml != null ? checkin.water_ml / 1000 : ''}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -156,7 +166,7 @@ export function DailyCheckinForm({
                 min={0}
                 max={24}
                 step="0.1"
-                defaultValue={todayCheckin?.sleep_hours ?? ''}
+                defaultValue={checkin?.sleep_hours ?? ''}
               />
             </div>
           </div>
@@ -164,27 +174,27 @@ export function DailyCheckinForm({
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <FieldLabel icon={Footprints} htmlFor="steps">Steps</FieldLabel>
-              <Input id="steps" name="steps" type="number" inputMode="numeric" min={0} defaultValue={todayCheckin?.steps ?? ''} />
+              <Input id="steps" name="steps" type="number" inputMode="numeric" min={0} defaultValue={checkin?.steps ?? ''} />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel icon={Beef} htmlFor="proteinG">Protein (g)</FieldLabel>
-              <Input id="proteinG" name="proteinG" type="number" inputMode="numeric" min={0} defaultValue={todayCheckin?.protein_g ?? ''} />
+              <Input id="proteinG" name="proteinG" type="number" inputMode="numeric" min={0} defaultValue={checkin?.protein_g ?? ''} />
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <FieldLabel icon={Flame} htmlFor="calories">Calories — optional</FieldLabel>
-            <Input id="calories" name="calories" type="number" inputMode="numeric" min={0} defaultValue={todayCheckin?.calories ?? ''} />
+            <Input id="calories" name="calories" type="number" inputMode="numeric" min={0} defaultValue={checkin?.calories ?? ''} />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <FieldLabel icon={NotebookPen} htmlFor="notes">Notes</FieldLabel>
-            <Textarea id="notes" name="notes" placeholder="How did today go?" defaultValue={todayCheckin?.notes ?? ''} />
+            <Textarea id="notes" name="notes" placeholder="How did today go?" defaultValue={checkin?.notes ?? ''} />
           </div>
         </CardContent>
         <CardFooter>
           <Button type="submit" disabled={pending} className="w-full" size="lg">
-            {pending ? 'Saving...' : todayCheckin ? 'Update check-in' : 'Save check-in'}
+            {pending ? 'Saving...' : checkin ? 'Update check-in' : 'Save check-in'}
           </Button>
         </CardFooter>
       </form>

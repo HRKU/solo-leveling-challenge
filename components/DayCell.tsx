@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { DayHabitBreakdown, HabitStatus } from '@/lib/xp'
 
@@ -17,29 +18,24 @@ const PRIORITY_SIZE_CLASSES: Record<number, string> = {
 }
 
 export function DayCell({
+  date,
   dayNumber,
   breakdown,
   isToday,
+  isFuture,
 }: {
+  date: string
   dayNumber: number
   breakdown: DayHabitBreakdown | null
   isToday: boolean
+  isFuture: boolean
 }) {
   const hasCheckin = breakdown?.hasCheckin ?? false
   const score = breakdown?.score ?? 0
-  // 0-100 score mapped to a background tint so a strong day visibly glows.
   const bgOpacity = hasCheckin ? Math.max(score, 8) / 100 : 0
 
-  return (
-    <div
-      className={cn(
-        'flex aspect-square flex-col items-center justify-center gap-1 rounded-md border p-1',
-        isToday ? 'border-primary' : 'border-transparent',
-        !hasCheckin && 'opacity-40'
-      )}
-      style={hasCheckin ? { backgroundColor: `color-mix(in oklch, var(--primary) ${bgOpacity * 60}%, transparent)` } : undefined}
-      title={hasCheckin ? `Score: ${score}` : 'No check-in'}
-    >
+  const content = (
+    <>
       <span className="text-xs tabular-nums text-muted-foreground">{dayNumber}</span>
       {hasCheckin && (
         <div className="flex items-center gap-0.5">
@@ -52,6 +48,35 @@ export function DayCell({
           ))}
         </div>
       )}
-    </div>
+    </>
+  )
+
+  const className = cn(
+    'flex aspect-square flex-col items-center justify-center gap-1 rounded-md border p-1',
+    isToday ? 'border-primary' : 'border-transparent',
+    !hasCheckin && 'opacity-40',
+    !isFuture && 'transition-colors hover:border-primary/50 hover:bg-muted/50'
+  )
+  const style = hasCheckin
+    ? { backgroundColor: `color-mix(in oklch, var(--primary) ${bgOpacity * 60}%, transparent)` }
+    : undefined
+
+  if (isFuture) {
+    return (
+      <div className={className} style={style} title="No check-in">
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      href={`/checkin/${date}`}
+      className={className}
+      style={style}
+      title={hasCheckin ? `Score: ${score} — click to edit` : 'No check-in — click to log'}
+    >
+      {content}
+    </Link>
   )
 }

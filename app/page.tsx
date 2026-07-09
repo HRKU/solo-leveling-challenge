@@ -4,7 +4,10 @@ import { RankBadge } from '@/components/RankBadge'
 import { XPBar } from '@/components/XPBar'
 import { StreakFlame } from '@/components/StreakFlame'
 import { DailyCheckinForm } from '@/components/DailyCheckinForm'
+import { BackfillDatePicker } from '@/components/BackfillDatePicker'
 import { Card, CardContent } from '@/components/ui/card'
+import Link from 'next/link'
+import { Settings } from 'lucide-react'
 import type { Profile, DailyCheckin } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -37,11 +40,20 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">
-      <div>
-        <h1 className="font-heading text-xl font-bold sm:text-2xl">
-          Welcome back, {profile!.name ?? profile!.display_name}
-        </h1>
-        <p className="text-sm text-muted-foreground">Keep the streak alive.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-xl font-bold sm:text-2xl">
+            Welcome back, {profile!.name ?? profile!.display_name}
+          </h1>
+          <p className="text-sm text-muted-foreground">Keep the streak alive.</p>
+        </div>
+        <Link
+          href="/profile"
+          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Settings className="size-3.5" strokeWidth={2} />
+          Edit profile
+        </Link>
       </div>
 
       <Card>
@@ -54,7 +66,15 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <DailyCheckinForm key={todayCheckin?.id ?? 'new'} todayCheckin={todayCheckin ?? null} targets={targets} />
+      <DailyCheckinForm
+        key={todayCheckin?.id ?? 'new'}
+        date={today}
+        isToday
+        checkin={todayCheckin ?? null}
+        targets={targets}
+      />
+
+      <BackfillDatePicker />
     </div>
   )
 }

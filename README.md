@@ -20,17 +20,25 @@ app/
     onboarding.ts        completes profile setup, gated by profiles.onboarded
     daily-checkins.ts    the entire XP trust boundary lives here
     weekly-checkins.ts   weight check-in, syncs profiles.current_weight_kg
+    challenges.ts        post a quest, toggle your own completion
+    profile.ts           edit profile fields (not weight — see below)
   login/ signup/ onboarding/    pre-app auth screens
   page.tsx                     "/" — dashboard: today's check-in + rank/XP/streak
-  calendar/                    habit-completion calendar
+  calendar/                    habit-completion calendar (click a day to backfill it)
   leaderboard/                 group leaderboard
   checkin/weekly/ progress/    weekly weigh-in + weight trend
+  checkin/[date]/              backfill/edit a past day's check-in
+  quests/                      group dares — free-text challenges, bonus XP on completion
+  profile/                     edit profile fields set during onboarding
 
 components/            UI components (components/ui/ = shadcn primitives)
 lib/
   supabase/             browser/server Supabase clients + the proxy session helper
   targets.ts            BMR/TDEE/protein/water target formulas
   xp.ts                 scoring formula, level/rank curve, streak logic
+  xp-resum.ts            single source-of-truth recomputation of total_xp —
+                         every XP source (daily check-ins, completed quests)
+                         must be added here, never given its own increment path
   types.ts              shared TypeScript types
 
 proxy.ts                Next.js 16's renamed "middleware" — session refresh,
@@ -44,7 +52,8 @@ supabase/migrations/    SQL schema, RLS policies, and the profile-creation trigg
 - Daily targets (calories, protein, water) are computed per person from age/sex/height/weight/goal via Mifflin-St Jeor BMR × activity factor. Sleep (8h) and steps (8,000) are fixed for everyone.
 - A day's XP = **reps (uncapped)** + water/sleep/steps/protein/calories (capped, partial credit for hitting a fraction of target). Reps are scored per exercise, no daily ceiling: push-ups ×1, pull-ups ×2, sit-ups ×0.75, crunches ×0.5 — more reps always means more XP. The other categories stay capped at water (24) > sleep + steps (10 + 10) > protein + calories (8 + 8). It's computed **server-side only** in `app/actions/daily-checkins.ts` — never trust a client-submitted XP value.
 - Level requires 52×N more XP each level; ranks are E (1–3), D (4–7), C (8–12), B (13–17), A (18–23), S (24+). A genuinely high-volume day can push well past what the old flat-scoring model topped out at — that's intentional; grinding is meant to be rewarded without a ceiling.
-- A streak only breaks if a day has **no check-in row at all** — a logged-but-rough day still counts.
+- A streak only breaks if a day has **no check-in row at all** — a logged-but-rough day still counts. Backfilling a past day (via the calendar or the dashboard's date picker) never touches the streak — it's pure historical record-keeping that still counts toward `total_xp`.
+- **Quests** (`/quests`) are a second XP source — free-text group dares with a creator-set bonus XP reward, completed via a self-reported toggle. `total_xp` is always the result of `lib/xp-resum.ts`'s `resumTotalXp()`, which re-sums *both* daily check-ins and completed quests from scratch every time — never an incremental adjustment, so toggling a quest on and back off can't be exploited for free XP.
 
 ## First-time setup
 
@@ -71,7 +80,7 @@ npm install
 ### 3. Apply the database schema
 
 1. In the Supabase dashboard, open **SQL Editor → New query**.
-2. Paste and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then do the same for [`supabase/migrations/0002_exercise_reps.sql`](supabase/migrations/0002_exercise_reps.sql) (adds the per-exercise rep-count columns).
+2. Paste and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`supabase/migrations/0002_exercise_reps.sql`](supabase/migrations/0002_exercise_reps.sql) (per-exercise rep-count columns), then [`supabase/migrations/0003_challenges.sql`](supabase/migrations/0003_challenges.sql) (quests + completions tables), in that order.
 
 This creates the `profiles`, `daily_checkins`, and `weekly_checkins` tables, all Row Level Security policies, and the trigger that auto-creates a profile row on signup.
 
