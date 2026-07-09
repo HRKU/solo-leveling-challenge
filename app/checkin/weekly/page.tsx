@@ -15,8 +15,8 @@ export default async function WeeklyCheckinPage() {
     .single<Pick<Profile, 'current_weight_kg'>>()
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 p-4 pb-16">
-      <h1 className="text-2xl font-bold">Weekly check-in</h1>
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 p-4 pb-8">
+      <h1 className="text-xl font-bold sm:text-2xl">Weekly check-in</h1>
       <WeeklyCheckinForm key={profile?.current_weight_kg ?? 'none'} currentWeightKg={profile?.current_weight_kg ?? null} />
     </div>
   )

@@ -4,6 +4,7 @@ import { RankBadge } from '@/components/RankBadge'
 import { XPBar } from '@/components/XPBar'
 import { StreakFlame } from '@/components/StreakFlame'
 import { DailyCheckinForm } from '@/components/DailyCheckinForm'
+import { Card, CardContent } from '@/components/ui/card'
 import type { Profile, DailyCheckin } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -35,19 +36,23 @@ export default async function DashboardPage() {
   })
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-4 pb-16">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Welcome back, {profile!.name ?? profile!.display_name}</h1>
-          <p className="text-sm text-muted-foreground">Keep the streak alive.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <RankBadge rank={profile!.rank} level={profile!.level} />
-          <StreakFlame streak={profile!.current_streak} />
-        </div>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">
+      <div>
+        <h1 className="font-heading text-xl font-bold sm:text-2xl">
+          Welcome back, {profile!.name ?? profile!.display_name}
+        </h1>
+        <p className="text-sm text-muted-foreground">Keep the streak alive.</p>
       </div>
 
-      <XPBar totalXp={profile!.total_xp} />
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <RankBadge rank={profile!.rank} level={profile!.level} size="lg" />
+            <StreakFlame streak={profile!.current_streak} />
+          </div>
+          <XPBar totalXp={profile!.total_xp} />
+        </CardContent>
+      </Card>
 
       <DailyCheckinForm key={todayCheckin?.id ?? 'new'} todayCheckin={todayCheckin ?? null} targets={targets} />
     </div>

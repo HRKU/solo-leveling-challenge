@@ -16,8 +16,8 @@ export default async function LeaderboardPage() {
     .returns<Profile[]>()
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-4 pb-16">
-      <h1 className="text-2xl font-bold">Leaderboard</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">
+      <h1 className="text-xl font-bold sm:text-2xl">Leaderboard</h1>
       <Leaderboard profiles={profiles ?? []} currentUserId={user!.id} />
     </div>
   )

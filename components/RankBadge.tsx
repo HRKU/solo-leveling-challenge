@@ -10,15 +10,46 @@ const RANK_STYLES: Record<Rank, string> = {
   S: 'bg-red-500/15 text-red-300 ring-red-500/40',
 }
 
+const RANK_GLOW: Record<Rank, string> = {
+  E: 'shadow-none',
+  D: 'shadow-[0_0_20px_-6px] shadow-emerald-500/50',
+  C: 'shadow-[0_0_20px_-6px] shadow-blue-500/50',
+  B: 'shadow-[0_0_24px_-6px] shadow-violet-500/60',
+  A: 'shadow-[0_0_24px_-6px] shadow-orange-500/60',
+  S: 'shadow-[0_0_28px_-6px] shadow-red-500/70',
+}
+
 export function RankBadge({
   rank,
   level,
+  size = 'sm',
   className,
 }: {
   rank: Rank
   level?: number
+  size?: 'sm' | 'lg'
   className?: string
 }) {
+  if (size === 'lg') {
+    return (
+      <div className={cn('flex items-center gap-3', className)}>
+        <div
+          className={cn(
+            'flex size-14 shrink-0 items-center justify-center rounded-2xl font-heading text-2xl font-bold ring-2',
+            RANK_STYLES[rank],
+            RANK_GLOW[rank]
+          )}
+        >
+          {rank}
+        </div>
+        <div className="flex flex-col">
+          <span className="font-heading text-sm font-semibold tracking-wide text-foreground">{rank}-RANK HUNTER</span>
+          {level != null && <span className="text-xs text-muted-foreground">Level {level}</span>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <span
       className={cn(
@@ -27,7 +58,7 @@ export function RankBadge({
         className
       )}
     >
-      <span className="text-base font-bold">{rank}</span>
+      <span className="font-heading text-base font-bold">{rank}</span>
       <span className="opacity-80">Rank</span>
       {level != null && <span className="opacity-60">· Lv {level}</span>}
     </span>

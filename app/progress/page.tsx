@@ -22,8 +22,8 @@ export default async function ProgressPage() {
     .returns<WeeklyCheckin[]>()
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-4 pb-16">
-      <h1 className="text-2xl font-bold">Your progress</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">
+      <h1 className="text-xl font-bold sm:text-2xl">Your progress</h1>
       <WeightTrendChart
         checkins={checkins ?? []}
         startingWeightKg={profile?.starting_weight_kg ?? null}
