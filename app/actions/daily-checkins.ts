@@ -56,7 +56,10 @@ export async function upsertDailyCheckin(
   const crunches = formData.get('crunches') ? Number(formData.get('crunches')) : null
   const calories = formData.get('calories') ? Number(formData.get('calories')) : null
   const proteinG = formData.get('proteinG') ? Number(formData.get('proteinG')) : null
-  const waterMl = formData.get('waterMl') ? Number(formData.get('waterMl')) : null
+  // Users enter water in liters (e.g. "5"); stored/scored as ml internally
+  // so the personalized target formula (lib/targets.ts) doesn't need to change.
+  const waterLiters = formData.get('waterLiters') ? Number(formData.get('waterLiters')) : null
+  const waterMl = waterLiters != null ? Math.round(waterLiters * 1000) : null
   const sleepHours = formData.get('sleepHours') ? Number(formData.get('sleepHours')) : null
   const steps = formData.get('steps') ? Number(formData.get('steps')) : null
   const notes = (formData.get('notes') as string) || null

@@ -68,7 +68,7 @@ export function DailyCheckinForm({
       <CardHeader>
         <CardTitle className="font-heading">{todayCheckin ? "Edit today's check-in" : "Today's check-in"}</CardTitle>
         <CardDescription>
-          Targets: {targets.waterTarget} ml water · {targets.sleepTarget}h sleep · {targets.stepsTarget} steps ·{' '}
+          Targets: {(targets.waterTarget / 1000).toFixed(1)}L water · {targets.sleepTarget}h sleep · {targets.stepsTarget} steps ·{' '}
           {targets.proteinTarget}g protein · {targets.calorieTarget} kcal
         </CardDescription>
       </CardHeader>
@@ -135,8 +135,16 @@ export function DailyCheckinForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <FieldLabel icon={Droplets} htmlFor="waterMl">Water (ml)</FieldLabel>
-              <Input id="waterMl" name="waterMl" type="number" inputMode="numeric" min={0} defaultValue={todayCheckin?.water_ml ?? ''} />
+              <FieldLabel icon={Droplets} htmlFor="waterLiters">Water (L)</FieldLabel>
+              <Input
+                id="waterLiters"
+                name="waterLiters"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.1"
+                defaultValue={todayCheckin?.water_ml != null ? todayCheckin.water_ml / 1000 : ''}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel icon={Moon} htmlFor="sleepHours">Sleep (hours)</FieldLabel>
