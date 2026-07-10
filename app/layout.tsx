@@ -20,6 +20,12 @@ const displayFont = Orbitron({
 export const metadata: Metadata = {
   title: "Solo Leveling Challenge",
   description: "Log your daily workouts, diet, sleep, and steps — level up with your crew.",
+  applicationName: "Solo Leveling Challenge",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SL Challenge",
+  },
 };
 
 export const viewport: Viewport = {
