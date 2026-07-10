@@ -1,7 +1,7 @@
 // One-off generator for the PWA icon set. Re-run after changing the design:
 //   node scripts/generate-icons.mjs
 import sharp from 'sharp'
-import { mkdir } from 'fs/promises'
+import { mkdir, writeFile } from 'fs/promises'
 
 // Lucide "swords" icon paths (24x24 viewBox) — same mark the NavBar brand uses.
 const SWORDS = `
@@ -35,6 +35,34 @@ function iconSvg(size, scale) {
 </svg>`
 }
 
+// ICO container with PNG-encoded entries (supported by all modern browsers).
+async function buildIco(sizes, scale) {
+  const pngs = await Promise.all(
+    sizes.map(async (size) => ({
+      size,
+      buf: await sharp(Buffer.from(iconSvg(size, scale))).png().toBuffer(),
+    }))
+  )
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0) // reserved
+  header.writeUInt16LE(1, 2) // type: icon
+  header.writeUInt16LE(pngs.length, 4)
+  const entries = []
+  let offset = 6 + 16 * pngs.length
+  for (const { size, buf } of pngs) {
+    const e = Buffer.alloc(16)
+    e.writeUInt8(size >= 256 ? 0 : size, 0) // width (0 = 256)
+    e.writeUInt8(size >= 256 ? 0 : size, 1) // height
+    e.writeUInt16LE(1, 4) // color planes
+    e.writeUInt16LE(32, 6) // bits per pixel
+    e.writeUInt32LE(buf.length, 8)
+    e.writeUInt32LE(offset, 12)
+    entries.push(e)
+    offset += buf.length
+  }
+  return Buffer.concat([header, ...entries, ...pngs.map((p) => p.buf)])
+}
+
 const targets = [
   { file: 'public/icon-192.png', size: 192, scale: 0.62 },
   { file: 'public/icon-512.png', size: 512, scale: 0.62 },
@@ -48,3 +76,7 @@ for (const { file, size, scale } of targets) {
   await sharp(Buffer.from(iconSvg(size, scale))).png().toFile(file)
   console.log(`wrote ${file} (${size}x${size})`)
 }
+
+// Favicon: slightly larger mark so it stays legible at 16px.
+await writeFile('app/favicon.ico', await buildIco([16, 32, 48], 0.78))
+console.log('wrote app/favicon.ico (16/32/48)')
