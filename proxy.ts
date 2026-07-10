@@ -6,9 +6,14 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // manifest.webmanifest is excluded because browsers fetch it without
-  // credentials — the auth redirect would break PWA installability.
+  // Excluded from the auth gate:
+  //  - manifest.webmanifest: browsers fetch it without credentials — the
+  //    redirect would break PWA installability
+  //  - sw.js: service worker script fetches must not be redirected, or the
+  //    browser rejects/unregisters the worker
+  //  - api/: route handlers do their own auth (the cron sender authenticates
+  //    via CRON_SECRET, not a session cookie)
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

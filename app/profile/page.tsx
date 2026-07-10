@@ -1,5 +1,6 @@
 import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { ProfileEditForm } from '@/components/ProfileEditForm'
+import { ReminderSettings } from '@/components/ReminderSettings'
 import type { Profile } from '@/lib/types'
 
 export default async function ProfilePage() {
@@ -13,8 +14,9 @@ export default async function ProfilePage() {
     .single<Profile>()
 
   return (
-    <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center p-4">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 p-4 pb-8">
       <ProfileEditForm profile={profile!} />
+      <ReminderSettings />
     </div>
   )
 }
