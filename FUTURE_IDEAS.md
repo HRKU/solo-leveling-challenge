@@ -15,15 +15,20 @@ Just a dump of directions worth considering next. Nothing here is scoped or comm
 
 ## Retention / habit mechanics
 - **Miss-a-day debuff** — small temporary XP penalty or "weakened" status after a broken streak, instead of just losing the streak counter silently. Adds a bit of loss-aversion.
-- **Reminders** — a daily nudge (browser push, or piggyback on the group's existing chat app via a bot) since people forgetting to log is probably the biggest churn risk, bigger than any feature gap.
 
 ## Data / insight
 - **Personal trends view** — best day of week, average reps over time, water/streak correlation — light analytics beyond the current weight-trend chart.
 - **Wearable sync** — pull steps/workouts from Google Fit/Apple Health to auto-fill part of the daily check-in instead of manual entry.
 
 ## Infra / polish
-- **Installable PWA** — add a manifest + service worker so it installs like a native app and can queue a check-in offline if signal's bad at the gym.
+- **Offline check-in queue** — extend the existing push-only service worker so a check-in can be queued when signal is bad at the gym and flushed on reconnect.
 - **Quest photo proof (optional)** — let a quest creator require an image attached to the completion toggle instead of pure honor system, for the dares where that matters.
 
 ---
-Reasonable next pick if picking just one: **weekly recap card** or **reminders** — both are low-effort and attack the actual failure mode (people forgetting to open the app) rather than adding new surface area.
+## Already shipped (don't re-plan)
+
+- **Installable PWA** — web manifest, icon set, Apple web-app meta; installs to home screen / standalone.
+- **Push reminders** — per-device opt-in on `/profile`, `push_subscriptions`, Vercel crons → `/api/reminders` (morning nudge + evening streak warning). Service worker (`public/sw.js`) handles **push display only** — no offline caching.
+
+---
+Reasonable next pick if picking just one: **weekly recap card** — low-effort, high shareability for the group chat — or **offline check-in queue** if gym connectivity is the real pain.

@@ -69,8 +69,8 @@ export async function upsertDailyCheckin(
   const durationMinutes = formData.get('durationMinutes') ? Number(formData.get('durationMinutes')) : null
   const pushups = formData.get('pushups') ? Number(formData.get('pushups')) : null
   const pullups = formData.get('pullups') ? Number(formData.get('pullups')) : null
-  const situps = formData.get('situps') ? Number(formData.get('situps')) : null
   const crunches = formData.get('crunches') ? Number(formData.get('crunches')) : null
+  const squats = formData.get('squats') ? Number(formData.get('squats')) : null
   const calories = formData.get('calories') ? Number(formData.get('calories')) : null
   const proteinG = formData.get('proteinG') ? Number(formData.get('proteinG')) : null
   // Users enter water in liters (e.g. "5"); stored/scored as ml internally
@@ -86,8 +86,8 @@ export async function upsertDailyCheckin(
   const workoutDone = Boolean(
     (pushups && pushups > 0) ||
       (pullups && pullups > 0) ||
-      (situps && situps > 0) ||
       (crunches && crunches > 0) ||
+      (squats && squats > 0) ||
       workoutType ||
       (durationMinutes && durationMinutes > 0)
   )
@@ -96,7 +96,7 @@ export async function upsertDailyCheckin(
   // targets — never read from the client, never rendered as an editable
   // form field. This is the entire trust boundary for the scoring system.
   const scoreXp = calculateDailyXP(
-    { pushups, pullups, situps, crunches, waterMl, sleepHours, steps, proteinG, calories },
+    { pushups, pullups, crunches, squats, waterMl, sleepHours, steps, proteinG, calories },
     targets
   )
 
@@ -109,8 +109,8 @@ export async function upsertDailyCheckin(
       duration_minutes: durationMinutes,
       pushups,
       pullups,
-      situps,
       crunches,
+      squats,
       calories,
       protein_g: proteinG,
       water_ml: waterMl,

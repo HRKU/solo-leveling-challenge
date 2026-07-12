@@ -1,0 +1,14 @@
+---
+description: Push reminders, service worker, and cron sender constraints
+globs: app/actions/push.ts,app/api/reminders/**/*.ts,components/ReminderSettings.tsx,public/sw.js,vercel.json
+alwaysApply: false
+---
+
+# Push reminders
+
+- Opt-in UI: `ReminderSettings` on `/profile`. Subscriptions saved via `app/actions/push.ts` to `push_subscriptions` (owner-only RLS).
+- `public/sw.js` is **push display + notification click only**. Do not add offline caching here unless explicitly building that feature.
+- Cron sender: `GET /api/reminders` authenticated with `Authorization: Bearer $CRON_SECRET`. Uses `SUPABASE_SERVICE_ROLE_KEY` + VAPID private key server-side only.
+- Schedules live in `vercel.json` (~8:00 / ~20:00 IST). Slot is derived from UTC hour (`< 12` morning, else evening) — evening filters to users with no check-in today.
+- Keep `proxy.ts` exclusions for `api/`, `sw.js`, and `manifest.webmanifest` so auth redirects do not break install or the worker.
+- iOS: PushManager only works in an installed PWA — preserve the "needs-install" nudge in `ReminderSettings`.

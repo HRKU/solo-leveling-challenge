@@ -30,8 +30,8 @@ export interface DailyCheckin {
   duration_minutes: number | null
   pushups: number | null
   pullups: number | null
-  situps: number | null
   crunches: number | null
+  squats: number | null
   calories: number | null
   protein_g: number | null
   water_ml: number | null

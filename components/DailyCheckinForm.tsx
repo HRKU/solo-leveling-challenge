@@ -105,11 +105,11 @@ export function DailyCheckinForm({
                 defaultValue={checkin?.pullups}
               />
               <RepField
-                id="situps"
-                label="Sit-ups"
-                weight={REP_WEIGHTS.situps}
-                suggested={REP_REFERENCE.situps}
-                defaultValue={checkin?.situps}
+                id="squats"
+                label="Squats"
+                weight={REP_WEIGHTS.squats}
+                suggested={REP_REFERENCE.squats}
+                defaultValue={checkin?.squats}
               />
               <RepField
                 id="crunches"
