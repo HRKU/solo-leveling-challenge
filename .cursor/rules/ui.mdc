@@ -1,0 +1,16 @@
+---
+description: UI component and styling conventions for this app
+globs: components/**/*.tsx,app/**/*.tsx,app/globals.css
+alwaysApply: false
+---
+
+# UI conventions
+
+- Reuse existing feature components and `components/ui/*` (shadcn / Base UI). Prefer extending over new primitives.
+- Pages are Server Components by default; add `'use client'` only for interactivity (forms, nav, charts, calendars).
+- Forms that mutate data call Server Actions (often via `useActionState` / form `action`) — match nearby forms.
+- Layout: `NavBar` + main content; hide nav on `/login`, `/signup`, `/onboarding` (see `HIDDEN_ROUTES`).
+- Profile page hosts both `ProfileEditForm` and `ReminderSettings` — keep reminder opt-in there unless asked to move it.
+- Styling: Tailwind v4 + CSS variables in `app/globals.css`. Fonts: body = Plus Jakarta Sans, display/heading = Orbitron (`font-heading`).
+- Dark theme is the product default (`className="dark"` on `<html>`). Preserve the existing look; don't restyle the app unless asked.
+- Shared types live in `lib/types.ts`. Don't duplicate Profile/Checkin shapes in components.

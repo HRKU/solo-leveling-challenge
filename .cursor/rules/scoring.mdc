@@ -1,0 +1,17 @@
+---
+description: XP, ranks, streaks, and daily target formulas — trust boundary
+globs: lib/xp.ts,lib/xp-resum.ts,lib/targets.ts,app/actions/daily-checkins.ts,app/actions/challenges.ts
+alwaysApply: false
+---
+
+# Scoring & targets
+
+XP is a trust boundary. Never accept or store a client-submitted XP value.
+
+- Daily XP: `calculateDailyXP()` in `lib/xp.ts`, called only from `app/actions/daily-checkins.ts`.
+- Targets: `calculateDailyTargets()` in `lib/targets.ts` (BMR/TDEE; sleep/steps fixed).
+- `profiles.total_xp` / level / rank: always via `resumTotalXp()` in `lib/xp-resum.ts` — re-sum from scratch. Never increment XP ad hoc.
+- Any new XP source must be added to `resumTotalXp()`, not given its own update path.
+- Reps are uncapped (pushups×1, pullups×2, squats×1, crunches×0.5). Other categories stay capped vs targets (water 24, sleep 10, steps 10, protein 8, calories 8).
+- Streak (`computeNextStreak`): only update for **today's** check-in. Backfills must not touch streak. A day with any check-in row counts; missing row breaks streak.
+- Water: UI uses liters; DB/scoring uses ml (`liters * 1000` in the action).

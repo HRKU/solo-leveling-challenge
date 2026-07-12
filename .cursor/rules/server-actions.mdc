@@ -1,0 +1,18 @@
+---
+description: Server Action patterns for auth, forms, and mutations
+globs: app/actions/**/*.ts
+alwaysApply: false
+---
+
+# Server Actions
+
+All files start with `'use server'`.
+
+- Authenticate with `supabase.auth.getUser()` inside the action (do not rely only on `x-user-id` for writes).
+- Prefer `FormState` return shapes: `{ error?: string; success?: boolean }` (see existing actions). Use `redirect()` for auth success flows.
+- Parse `FormData` defensively; reject invalid/future dates where relevant.
+- After successful writes, call `revalidatePath` for affected routes.
+- Weight: only onboarding + `weekly-checkins.ts` may set `current_weight_kg`. `profile.ts` must not edit starting/current weight.
+- Quests (`challenges.ts`): creator posts; completion is self-reported toggle; then `resumTotalXp()`. Challenges are insert-only (no edit/delete in v1).
+- Push (`push.ts`): upsert/delete `push_subscriptions` by endpoint for the authenticated user only — no XP side effects.
+- Keep scoring logic in `lib/`; actions orchestrate auth → validate → compute → persist → resum → revalidate.

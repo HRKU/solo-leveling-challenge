@@ -1,0 +1,18 @@
+---
+description: Core project conventions — mature codebase, minimal diffs, Next.js 16
+alwaysApply: true
+---
+
+# Solo Leveling Challenge — core
+
+This is a mature app, not a greenfield project.
+
+- Read existing code before editing. Extend patterns; do not invent new ones.
+- Keep changes minimal and focused. No drive-by refactors, renames, or restructures unless asked.
+- Preserve behavior unless the task requires changing it.
+- If README/docs and code disagree, call it out before changing either.
+- Next.js 16 has breaking changes — check `node_modules/next/dist/docs/` and heed deprecations (see `AGENTS.md`).
+- `proxy.ts` is Next 16's renamed middleware (session refresh, auth + onboarding gates). Do not add a separate `middleware.ts`.
+- User data writes go through Server Actions in `app/actions/`. The only route handler exception is cron push at `app/api/reminders` (Bearer `CRON_SECRET`).
+- Do not invent env vars. Required local vars are only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for normal app use; push/cron secrets are listed in README. Use Supabase MCP + `.agents/skills/supabase*` for schema/migrations and DB lookups — do not ask the user to paste SQL when MCP is available.
+- E2E/UI tests: use the dummy account in gitignored `.env.test.local` (`TEST_USER_EMAIL` / `TEST_USER_PASSWORD`). Never commit that file; never print the password in chat or logs.

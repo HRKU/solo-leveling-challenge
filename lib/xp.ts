@@ -5,8 +5,8 @@ export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
 export interface DailyCheckinInput {
   pushups: number | null
   pullups: number | null
-  situps: number | null
   crunches: number | null
+  squats: number | null
   waterMl: number | null
   sleepHours: number | null
   steps: number | null
@@ -15,12 +15,12 @@ export interface DailyCheckinInput {
 }
 
 // Points per rep — uncapped, no daily ceiling. Pull-ups are weighted highest
-// since a comparable rep is much harder to produce than a pushup/situp/crunch.
+// since a comparable rep is much harder to produce than a pushup/crunch/squat.
 export const REP_WEIGHTS = {
   pushups: 1,
   pullups: 2,
-  situps: 0.75,
   crunches: 0.5,
+  squats: 1,
 } as const
 
 // A "solid single day" reference per exercise — used only to color the
@@ -29,15 +29,15 @@ export const REP_WEIGHTS = {
 export const REP_REFERENCE = {
   pushups: 30,
   pullups: 10,
-  situps: 30,
-  crunches: 25,
+  crunches: 30,
+  squats: 30,
 } as const
 
 const REP_REFERENCE_MAX =
   REP_REFERENCE.pushups * REP_WEIGHTS.pushups +
   REP_REFERENCE.pullups * REP_WEIGHTS.pullups +
-  REP_REFERENCE.situps * REP_WEIGHTS.situps +
-  REP_REFERENCE.crunches * REP_WEIGHTS.crunches
+  REP_REFERENCE.crunches * REP_WEIGHTS.crunches +
+  REP_REFERENCE.squats * REP_WEIGHTS.squats
 
 // One uniform rule for every numeric sub-item apart from reps: linear credit
 // capped at hitting/exceeding target, no bonus for overshooting.
@@ -50,8 +50,8 @@ function repPoints(input: DailyCheckinInput): number {
   return (
     Math.max(input.pushups ?? 0, 0) * REP_WEIGHTS.pushups +
     Math.max(input.pullups ?? 0, 0) * REP_WEIGHTS.pullups +
-    Math.max(input.situps ?? 0, 0) * REP_WEIGHTS.situps +
-    Math.max(input.crunches ?? 0, 0) * REP_WEIGHTS.crunches
+    Math.max(input.crunches ?? 0, 0) * REP_WEIGHTS.crunches +
+    Math.max(input.squats ?? 0, 0) * REP_WEIGHTS.squats
   )
 }
 

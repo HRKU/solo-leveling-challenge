@@ -11,8 +11,8 @@ function toDailyCheckinInput(checkin: DailyCheckin): DailyCheckinInput {
   return {
     pushups: checkin.pushups,
     pullups: checkin.pullups,
-    situps: checkin.situps,
     crunches: checkin.crunches,
+    squats: checkin.squats,
     waterMl: checkin.water_ml,
     sleepHours: checkin.sleep_hours,
     steps: checkin.steps,

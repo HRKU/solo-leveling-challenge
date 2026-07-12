@@ -1,0 +1,16 @@
+---
+description: Supabase clients, RLS expectations, and schema migrations
+globs: lib/supabase/**/*.ts,proxy.ts,supabase/**/*.sql
+alwaysApply: false
+---
+
+# Supabase
+
+- Browser: `lib/supabase/client.ts`. Server Components/Actions: `lib/supabase/server.ts`.
+- Session refresh + gates live in `lib/supabase/proxy.ts`, invoked from root `proxy.ts`.
+- `getCurrentUserId()` reads `x-user-id` set by the proxy — latency optimization for reads only. Writes still call `getUser()`.
+- Env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Never put the service role key in client code — cron-only in `app/api/reminders`.
+- RLS: group can `select` shared tables; owners insert/update own rows. `push_subscriptions` is owner-only on every verb (not group-visible). Profiles are created by the signup trigger, not client inserts.
+- Schema changes: add a numbered file under `supabase/migrations/` (currently through `0005`), then apply via Supabase MCP `apply_migration` (DDL). Prefer `list_tables` / targeted `execute_sql` aggregates before mutating; avoid `select *` dumps.
+- Follow `.agents/skills/supabase` + `supabase-postgres-best-practices` for RLS/security and query performance.
+- `supabase/reset_data.sql` wipes `auth.users` (cascades app data) — treat as destructive ops docs, not app runtime.
