@@ -17,7 +17,7 @@ Just a dump of directions worth considering next. Nothing here is scoped or comm
 - **Miss-a-day debuff** — small temporary XP penalty or "weakened" status after a broken streak, instead of just losing the streak counter silently. Adds a bit of loss-aversion.
 
 ## Data / insight
-- **Personal trends view** — best day of week, average workout volume over time, water/streak correlation — light analytics beyond the Progress weight chart.
+- **Personal trends view** — best day of week, average reps over time, water/streak correlation — light analytics beyond the current weight-trend chart.
 - **Wearable sync** — pull steps/workouts from Google Fit/Apple Health to auto-fill part of the daily check-in instead of manual entry.
 
 ## Infra / polish
@@ -29,9 +29,6 @@ Just a dump of directions worth considering next. Nothing here is scoped or comm
 
 - **Installable PWA** — web manifest, icon set, Apple web-app meta; installs to home screen / standalone.
 - **Push reminders** — per-device opt-in on `/profile`, `push_subscriptions`, Vercel crons → `/api/reminders` (morning nudge + evening streak warning). Service worker (`public/sw.js`) handles **push display only** — no offline caching.
-- **Workout logger + scoring v2** — catalogue sets, `workout_entries` jsonb, effort/PR scoring with soft caps; see `docs/SCORING.md`.
-- **Progress hub** — weekly weigh-in merged into `/progress` (modal + shadcn weight chart); `/checkin/weekly` redirects.
-- **Leaderboard champion** — #1 special card with subtle gold glow.
 
 ---
 Reasonable next pick if picking just one: **weekly recap card** — low-effort, high shareability for the group chat — or **offline check-in queue** if gym connectivity is the real pain.
