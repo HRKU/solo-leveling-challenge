@@ -1,53 +1,16 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useActionState, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { upsertDailyCheckin } from '@/app/actions/daily-checkins'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import { DailyEssentials, type DailyEssentialsValues } from '@/components/DailyEssentials'
+import { WorkoutLogger } from '@/components/workout/WorkoutLogger'
 import type { DailyCheckin } from '@/lib/types'
 import type { DailyTargets } from '@/lib/targets'
-import { REP_WEIGHTS, REP_REFERENCE } from '@/lib/xp'
-import { Dumbbell, Clock, Droplets, Moon, Footprints, Beef, Flame, NotebookPen } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-
-function FieldLabel({ icon: Icon, htmlFor, children }: { icon: LucideIcon; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <Label htmlFor={htmlFor} className="flex items-center gap-1.5 text-muted-foreground">
-      <Icon className="size-3.5 shrink-0" strokeWidth={2} />
-      <span className="text-foreground">{children}</span>
-    </Label>
-  )
-}
-
-function RepField({
-  id,
-  label,
-  weight,
-  suggested,
-  defaultValue,
-}: {
-  id: string
-  label: string
-  weight: number
-  suggested: number
-  defaultValue: number | null | undefined
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="flex items-baseline justify-between">
-        <span>{label}</span>
-        <span className="text-xs font-normal text-muted-foreground">
-          {weight} pt/rep · try {suggested}+
-        </span>
-      </Label>
-      <Input id={id} name={id} type="number" inputMode="numeric" min={0} defaultValue={defaultValue ?? ''} />
-    </div>
-  )
-}
+import { dailyCheckinPayloadSchema } from '@/lib/validation/checkin'
+import { hydrateWorkoutEntries, type WorkoutEntry } from '@/lib/workout-logger'
 
 export function DailyCheckinForm({
   date,
@@ -61,14 +24,66 @@ export function DailyCheckinForm({
   targets: DailyTargets
 }) {
   const [state, action, pending] = useActionState(upsertDailyCheckin, undefined)
+  const [entries, setEntries] = useState<WorkoutEntry[]>(() => hydrateWorkoutEntries(checkin))
+  const [essentials, setEssentials] = useState<DailyEssentialsValues>(() => ({
+    waterMl: checkin?.water_ml ?? null,
+    steps: checkin?.steps ?? null,
+    proteinG: checkin?.protein_g ?? null,
+    calories: checkin?.calories ?? null,
+    sleepHours: checkin?.sleep_hours ?? null,
+    notes: checkin?.notes ?? '',
+  }))
+
+  const workoutJson = useMemo(() => JSON.stringify(entries), [entries])
 
   useEffect(() => {
-    if (state?.success) toast.success(isToday ? "Today's check-in saved." : `Check-in for ${date} saved.`)
-    if (state?.error) toast.error(state.error)
+    if (state?.error) {
+      toast.error(state.error)
+      return
+    }
+    if (!state?.success) return
+
+    if (state.created) {
+      toast.success(isToday ? "Today's check-in saved." : `Check-in for ${date} saved.`)
+    } else {
+      toast.success(isToday ? "Today's check-in updated." : `Check-in for ${date} updated.`)
+    }
+    if (state.prAwarded) {
+      toast.success('New personal best — bonus XP awarded.')
+    }
   }, [state, date, isToday])
 
   const titleVerb = checkin ? 'Edit' : 'Log'
   const titleWhen = isToday ? "today's" : date
+
+  function validateBeforeSubmit(form: HTMLFormElement): boolean {
+    const fd = new FormData(form)
+    // Mirror hidden fields from React state (controlled).
+    fd.set('workoutEntries', workoutJson)
+    fd.set('waterMl', essentials.waterMl != null ? String(essentials.waterMl) : '')
+    fd.set('sleepHours', essentials.sleepHours != null ? String(essentials.sleepHours) : '')
+    fd.set('steps', essentials.steps != null ? String(essentials.steps) : '')
+    fd.set('proteinG', essentials.proteinG != null ? String(essentials.proteinG) : '')
+    fd.set('calories', essentials.calories != null ? String(essentials.calories) : '')
+    fd.set('notes', essentials.notes)
+
+    const candidate = {
+      date: (fd.get('date') as string) || undefined,
+      waterMl: essentials.waterMl,
+      sleepHours: essentials.sleepHours,
+      steps: essentials.steps,
+      proteinG: essentials.proteinG,
+      calories: essentials.calories,
+      notes: essentials.notes.trim() ? essentials.notes.trim() : null,
+      workoutEntries: entries,
+    }
+    const parsed = dailyCheckinPayloadSchema.safeParse(candidate)
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? 'Invalid check-in data.')
+      return false
+    }
+    return true
+  }
 
   return (
     <Card>
@@ -77,124 +92,36 @@ export function DailyCheckinForm({
           {titleVerb} {titleWhen} check-in
         </CardTitle>
         <CardDescription>
-          Targets: {(targets.waterTarget / 1000).toFixed(1)}L water · {targets.sleepTarget}h sleep · {targets.stepsTarget} steps ·{' '}
-          {targets.proteinTarget}g protein · {targets.calorieTarget} kcal
+          Targets: {(targets.waterTarget / 1000).toFixed(1)}L water · {targets.sleepTarget}h sleep ·{' '}
+          {targets.stepsTarget.toLocaleString()} steps · {targets.proteinTarget}g protein · {targets.calorieTarget}{' '}
+          kcal
         </CardDescription>
       </CardHeader>
-      <form action={action}>
+      <form
+        action={action}
+        onSubmit={(e) => {
+          if (!validateBeforeSubmit(e.currentTarget)) {
+            e.preventDefault()
+          }
+        }}
+        className="pb-[env(safe-area-inset-bottom)]"
+      >
         <input type="hidden" name="date" value={date} />
+        <input type="hidden" name="workoutEntries" value={workoutJson} />
+        <input type="hidden" name="waterMl" value={essentials.waterMl ?? ''} />
+        <input type="hidden" name="sleepHours" value={essentials.sleepHours ?? ''} />
+        <input type="hidden" name="steps" value={essentials.steps ?? ''} />
+        <input type="hidden" name="proteinG" value={essentials.proteinG ?? ''} />
+        <input type="hidden" name="calories" value={essentials.calories ?? ''} />
+        <input type="hidden" name="notes" value={essentials.notes} />
+
         <CardContent className="flex flex-col gap-5">
-          <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-3.5">
-            <div className="flex items-center gap-2">
-              <Dumbbell className="size-4 shrink-0 text-primary" strokeWidth={2} />
-              <span className="font-medium">Reps — worth the most XP, no cap</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <RepField
-                id="pushups"
-                label="Push-ups"
-                weight={REP_WEIGHTS.pushups}
-                suggested={REP_REFERENCE.pushups}
-                defaultValue={checkin?.pushups}
-              />
-              <RepField
-                id="pullups"
-                label="Pull-ups"
-                weight={REP_WEIGHTS.pullups}
-                suggested={REP_REFERENCE.pullups}
-                defaultValue={checkin?.pullups}
-              />
-              <RepField
-                id="squats"
-                label="Squats"
-                weight={REP_WEIGHTS.squats}
-                suggested={REP_REFERENCE.squats}
-                defaultValue={checkin?.squats}
-              />
-              <RepField
-                id="crunches"
-                label="Crunches"
-                weight={REP_WEIGHTS.crunches}
-                suggested={REP_REFERENCE.crunches}
-                defaultValue={checkin?.crunches}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel icon={Dumbbell} htmlFor="workoutType">
-                Other activity — optional
-              </FieldLabel>
-              <Input id="workoutType" name="workoutType" placeholder="e.g. 5k run" defaultValue={checkin?.workout_type ?? ''} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel icon={Clock} htmlFor="durationMinutes">
-                Duration (min)
-              </FieldLabel>
-              <Input
-                id="durationMinutes"
-                name="durationMinutes"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                defaultValue={checkin?.duration_minutes ?? ''}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel icon={Droplets} htmlFor="waterLiters">Water (L)</FieldLabel>
-              <Input
-                id="waterLiters"
-                name="waterLiters"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                step="0.1"
-                defaultValue={checkin?.water_ml != null ? checkin.water_ml / 1000 : ''}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel icon={Moon} htmlFor="sleepHours">Sleep (hours)</FieldLabel>
-              <Input
-                id="sleepHours"
-                name="sleepHours"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                max={24}
-                step="0.1"
-                defaultValue={checkin?.sleep_hours ?? ''}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel icon={Footprints} htmlFor="steps">Steps</FieldLabel>
-              <Input id="steps" name="steps" type="number" inputMode="numeric" min={0} defaultValue={checkin?.steps ?? ''} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel icon={Beef} htmlFor="proteinG">Protein (g)</FieldLabel>
-              <Input id="proteinG" name="proteinG" type="number" inputMode="numeric" min={0} defaultValue={checkin?.protein_g ?? ''} />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <FieldLabel icon={Flame} htmlFor="calories">Calories — optional</FieldLabel>
-            <Input id="calories" name="calories" type="number" inputMode="numeric" min={0} defaultValue={checkin?.calories ?? ''} />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <FieldLabel icon={NotebookPen} htmlFor="notes">Notes</FieldLabel>
-            <Textarea id="notes" name="notes" placeholder="How did today go?" defaultValue={checkin?.notes ?? ''} />
-          </div>
+          <WorkoutLogger entries={entries} onChange={setEntries} />
+          <DailyEssentials values={essentials} onChange={setEssentials} targets={targets} />
         </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={pending} className="w-full" size="lg">
-            {pending ? 'Saving...' : checkin ? 'Update check-in' : 'Save check-in'}
+        <CardFooter className="sticky bottom-0 z-10 border-t border-border/40 bg-card/95 pt-4 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+          <Button type="submit" disabled={pending} className="min-h-11 w-full" size="lg" aria-busy={pending}>
+            {pending ? 'Saving…' : checkin ? 'Update check-in' : 'Save check-in'}
           </Button>
         </CardFooter>
       </form>

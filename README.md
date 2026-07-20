@@ -1,6 +1,6 @@
 # Solo Leveling Challenge
 
-A gamified fitness-challenge tracker for a friend group, replacing a shared Excel sheet. Log a daily check-in (push-ups, pull-ups, squats, crunches, water, sleep, steps, protein, calories) and a weekly weigh-in; your consistency and effort convert into XP, a level, and a Hunter rank (E → S), all visible on a shared leaderboard.
+A gamified fitness-challenge tracker for a friend group, replacing a shared Excel sheet. Log a daily check-in (workout sets + habits: water, sleep, steps, protein, calories) and a weekly weigh-in on Progress; consistency and effort convert into XP, a level, and a Hunter rank (E → S), all visible on a shared leaderboard.
 
 Themed after *Solo Leveling* — daily targets are personalized per person (BMR/TDEE-based), your score is computed server-side so it can't be gamed, and a streak survives as long as you log *something* each day, even a rough one.
 
@@ -18,30 +18,38 @@ app/
   actions/            Server Actions — preferred place data gets written
     auth.ts             sign up / log in / sign out
     onboarding.ts        completes profile setup, gated by profiles.onboarded
-    daily-checkins.ts    the entire XP trust boundary lives here
-    weekly-checkins.ts   weight check-in, syncs profiles.current_weight_kg
+    daily-checkins.ts    the entire XP trust boundary lives here (scoring v2)
+    weekly-checkins.ts   weigh-in upsert; syncs profiles.current_weight_kg
     challenges.ts        post a quest, toggle your own completion
-    profile.ts           edit profile fields (not weight — see below)
+    profile.ts           edit profile fields (not weight — see Progress)
     push.ts              save/delete per-device push subscriptions
   api/reminders/        cron-only route — sends morning/evening push (not user CRUD)
   login/ signup/ onboarding/    pre-app auth screens
   page.tsx                     "/" — dashboard: today's check-in + rank/XP/streak
   calendar/                    habit-completion calendar (click a day to backfill it)
-  leaderboard/                 group leaderboard
-  checkin/weekly/ progress/    weekly weigh-in + weight trend
+  leaderboard/                 group leaderboard (#1 champion card)
+  progress/                    body hub: weigh-in modal + weight trend (shadcn chart)
+  checkin/weekly/              redirects → /progress (legacy URL)
   checkin/[date]/              backfill/edit a past day's check-in
   quests/                      group dares — free-text challenges, bonus XP on completion
   profile/                     edit profile + daily-reminders toggle
 
-components/            UI components (components/ui/ = shadcn primitives)
+components/            UI (components/ui/ = shadcn; components/workout/ = logger sheets)
 lib/
   supabase/             browser/server Supabase clients + the proxy session helper
+  scoring/              v2 workout formula + habit XP (see docs/SCORING.md)
+  exercise-catalog.ts   seeded exercise list for the workout logger
+  workout-logger.ts     entry/set helpers, classic aggregates, client XP estimate
   targets.ts            BMR/TDEE/protein/water target formulas
-  xp.ts                 scoring formula, level/rank curve, streak logic
-  xp-resum.ts            single source-of-truth recomputation of total_xp —
-                         every XP source (daily check-ins, completed quests)
-                         must be added here, never given its own increment path
+  xp.ts                 level/rank curve, streak, calendar helpers; legacy calculateDailyXP
+  xp-resum.ts            single source-of-truth recomputation of total_xp
+  week.ts               UTC Monday week-start helper
   types.ts              shared TypeScript types
+  validation/           Zod check-in / search sanitization
+
+docs/
+  PRODUCT.md            product surfaces & UX contracts
+  SCORING.md            scoring v2 formula (canonical)
 
 proxy.ts                Next.js 16's renamed "middleware" — session refresh,
                         auth gate, and the onboarding gate (excludes api/, sw.js,
@@ -53,13 +61,19 @@ vercel.json             Vercel cron schedules for /api/reminders
 supabase/migrations/    SQL schema, RLS policies, and the profile-creation trigger
 ```
 
-### How scoring works (see `lib/xp.ts` and `lib/targets.ts`)
+### How scoring works
 
-- Daily targets (calories, protein, water) are computed per person from age/sex/height/weight/goal via Mifflin-St Jeor BMR × activity factor. Sleep (8h) and steps (8,000) are fixed for everyone.
-- A day's XP = **reps (uncapped)** + water/sleep/steps/protein/calories (capped, partial credit for hitting a fraction of target). Reps are scored per exercise, no daily ceiling: push-ups ×1, pull-ups ×2, squats ×1, crunches ×0.5 — more reps always means more XP. Water (up to 24) and steps (up to 10 toward 8,000) already reward logging those habits; sleep (10) and protein + calories (8 + 8) use the same capped style. It's computed **server-side only** in `app/actions/daily-checkins.ts` — never trust a client-submitted XP value.
-- Level requires 52×N more XP each level; ranks are E (1–3), D (4–7), C (8–12), B (13–17), A (18–23), S (24+). A genuinely high-volume day can push well past what the old flat-scoring model topped out at — that's intentional; grinding is meant to be rewarded without a ceiling.
-- A streak only breaks if a day has **no check-in row at all** — a logged-but-rough day still counts. Backfilling a past day (via the calendar or the dashboard's date picker) never touches the streak — it's pure historical record-keeping that still counts toward `total_xp`.
-- **Quests** (`/quests`) are a second XP source — free-text group dares with a creator-set bonus XP reward, completed via a self-reported toggle. `total_xp` is always the result of `lib/xp-resum.ts`'s `resumTotalXp()`, which re-sums *both* daily check-ins and completed quests from scratch every time — never an incremental adjustment, so toggling a quest on and back off can't be exploited for free XP.
+See **[`docs/SCORING.md`](docs/SCORING.md)** for the full v2 formula. Short version:
+
+- **Default path (v2):** effort-based set XP + stronger kg-canonical PR bonuses, soft workout cap (~90 → ceiling 110), plus capped habit XP. Written server-side in `upsertDailyCheckin` with `scoring_version` + `score_breakdown`. Untouched historical rows keep their stored `score_xp`.
+- **Habits:** water 24, sleep 10, steps 10, protein 8, calories 8 — ratio-capped vs targets ([`lib/targets.ts`](lib/targets.ts)).
+- **Do not** stack classic `REP_WEIGHTS` on top of v2 workout XP. Classic columns remain denormalized for calendar/compat.
+- Level requires 52×N more XP each level; ranks are E (1–3), D (4–7), C (8–12), B (13–17), A (18–23), S (24+).
+- A streak only breaks if a day has **no check-in row at all**. Backfills never touch the streak.
+- **Quests** are a second XP source; `total_xp` always comes from `resumTotalXp()` (daily scores + completed quests), never an incremental patch.
+- Rollback flag: `SCORING_VERSION=1` forces the legacy scoring path for new writes.
+
+Product UX (check-in, Progress hub, leaderboard champion, etc.): **[`docs/PRODUCT.md`](docs/PRODUCT.md)**.
 
 ## First-time setup
 
@@ -92,6 +106,8 @@ npm install
    - [`supabase/migrations/0003_challenges.sql`](supabase/migrations/0003_challenges.sql) (quests + completions)
    - [`supabase/migrations/0004_push_subscriptions.sql`](supabase/migrations/0004_push_subscriptions.sql) (push reminder subscriptions)
    - [`supabase/migrations/0005_reps_squats_drop_situps.sql`](supabase/migrations/0005_reps_squats_drop_situps.sql) (merge situps → crunches, add squats)
+   - [`supabase/migrations/0006_workout_entries.sql`](supabase/migrations/0006_workout_entries.sql) (`workout_entries` jsonb on daily check-ins)
+   - [`supabase/migrations/0007_scoring_version.sql`](supabase/migrations/0007_scoring_version.sql) (`scoring_version` + `score_breakdown`)
 
 This creates the `profiles`, `daily_checkins`, `weekly_checkins`, `challenges` / `challenge_completions`, and `push_subscriptions` tables, all Row Level Security policies, and the trigger that auto-creates a profile row on signup.
 
@@ -122,6 +138,7 @@ Open [http://localhost:3000](http://localhost:3000), sign up, complete onboardin
 | `npm run build` | Production build |
 | `npm run start` | Run the production build |
 | `npm run lint` | Lint with ESLint |
+| `npx tsx scripts/scoring-v2-smoke.ts` | Scoring v2 formula smoke tests |
 
 ## Installable app (PWA)
 
