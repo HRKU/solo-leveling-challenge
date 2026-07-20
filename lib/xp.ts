@@ -175,14 +175,19 @@ function statusFromRatio(earned: number, max: number): HabitStatus {
 
 /**
  * Collapses the scored inputs into 4 priority-ordered habit dots for the
- * calendar view: Workout (most prominent, uncapped reps) -> Water -> Sleep &
- * Steps -> Nutrition (least prominent). The workout dot's status is colored
- * against REP_REFERENCE for readability, but its point total is never capped.
+ * calendar view: Workout -> Water -> Sleep & Steps -> Nutrition.
+ * For scoring v2 rows, pass workoutXpOverride from score_breakdown.workoutXp
+ * so the workout dot matches the stored effort-based score.
  */
 export function buildDayHabitBreakdown(
   date: string,
   checkin: DailyCheckinInput | null,
-  targets: DailyTargets
+  targets: DailyTargets,
+  options?: {
+    scoringVersion?: number | null
+    workoutXpOverride?: number | null
+    scoreXp?: number | null
+  }
 ): DayHabitBreakdown {
   if (!checkin) {
     return {
@@ -198,7 +203,10 @@ export function buildDayHabitBreakdown(
     }
   }
 
-  const workoutPoints = repPoints(checkin)
+  const useV2 = options?.scoringVersion === 2 && options.workoutXpOverride != null
+  const workoutPoints = useV2 ? options.workoutXpOverride! : repPoints(checkin)
+  const workoutPointsMax = useV2 ? 90 : REP_REFERENCE_MAX
+
   const waterPoints = 24 * ratio(checkin.waterMl, targets.waterTarget)
   const sleepStepsPoints =
     10 * ratio(checkin.sleepHours, targets.sleepTarget) + 10 * ratio(checkin.steps, targets.stepsTarget)
@@ -206,7 +214,10 @@ export function buildDayHabitBreakdown(
     8 * ratio(checkin.proteinG, targets.proteinTarget) +
     (checkin.calories != null ? 8 * ratio(checkin.calories, targets.calorieTarget) : 0)
 
-  const score = Math.round(workoutPoints + waterPoints + sleepStepsPoints + nutritionPoints)
+  const score =
+    options?.scoreXp != null
+      ? options.scoreXp
+      : Math.round(workoutPoints + waterPoints + sleepStepsPoints + nutritionPoints)
 
   return {
     date,
@@ -217,9 +228,9 @@ export function buildDayHabitBreakdown(
         key: 'workout',
         label: 'Workout',
         priority: 1,
-        status: statusFromRatio(Math.min(workoutPoints, REP_REFERENCE_MAX), REP_REFERENCE_MAX),
+        status: statusFromRatio(Math.min(workoutPoints, workoutPointsMax), workoutPointsMax),
         pointsEarned: Math.round(workoutPoints),
-        pointsMax: Math.round(REP_REFERENCE_MAX),
+        pointsMax: Math.round(workoutPointsMax),
       },
       {
         key: 'water',

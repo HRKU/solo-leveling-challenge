@@ -4,15 +4,60 @@ import { createClient } from '@/lib/supabase/server'
 import { calculateDailyTargets } from '@/lib/targets'
 import { calculateDailyXP, computeNextStreak } from '@/lib/xp'
 import { resumTotalXp } from '@/lib/xp-resum'
+import { parseDailyCheckinFormData } from '@/lib/validation/checkin'
+import { aggregateClassicReps, scoreExtraWorkoutXp, type WorkoutEntry } from '@/lib/workout-logger'
+import { calculateHabitXp } from '@/lib/scoring/habits'
+import {
+  SCORING_VERSION_V2,
+  buildPrevBestKgMap,
+  buildScoreBreakdown,
+  scoreWorkoutV2,
+} from '@/lib/scoring/v2'
 import { revalidatePath } from 'next/cache'
 
 export interface CheckinFormState {
   error?: string
   success?: boolean
+  /** True when this upsert created a new row vs updated an existing one. */
+  created?: boolean
+  /** True when at least one personal-best bonus was awarded. */
+  prAwarded?: boolean
 }
 
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+async function loadPrevBestByExercise(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  excludeDate: string
+): Promise<Map<string, number>> {
+  const cutoff = new Date(`${excludeDate}T00:00:00Z`)
+  cutoff.setUTCDate(cutoff.getUTCDate() - 90)
+  const since = cutoff.toISOString().slice(0, 10)
+
+  const { data } = await supabase
+    .from('daily_checkins')
+    .select('checkin_date, workout_entries')
+    .eq('user_id', userId)
+    .neq('checkin_date', excludeDate)
+    .gte('checkin_date', since)
+    .not('workout_entries', 'is', null)
+
+  const flat: { exerciseId: string; weightUnit: 'kg' | 'lb'; sets: { weight: number | null }[] }[] = []
+  for (const row of data ?? []) {
+    const entries = row.workout_entries as WorkoutEntry[] | null
+    if (!Array.isArray(entries)) continue
+    for (const e of entries) {
+      flat.push({
+        exerciseId: e.exerciseId,
+        weightUnit: e.weightUnit === 'lb' ? 'lb' : 'kg',
+        sets: (e.sets ?? []).map((s) => ({ weight: s.weight ?? null })),
+      })
+    }
+  }
+  return buildPrevBestKgMap(flat)
 }
 
 export async function upsertDailyCheckin(
@@ -46,12 +91,13 @@ export async function upsertDailyCheckin(
   }
 
   const today = todayUtc()
-  // Which day this entry is for — defaults to today so the dashboard form
-  // (which doesn't pass a date) keeps working unchanged. Safe to trust from
-  // the client: it only selects which row gets written, not how many points
-  // it's worth (score is still computed server-side below regardless of
-  // date). The only guardrail that matters is rejecting the future.
-  const date = (formData.get('date') as string) || today
+  const parsed = parseDailyCheckinFormData(formData)
+  if (!parsed.success) {
+    return { error: parsed.error }
+  }
+
+  const { data: payload } = parsed
+  const date = payload.date || today
   if (date > today) {
     return { error: "Can't log a day that hasn't happened yet." }
   }
@@ -65,58 +111,88 @@ export async function upsertDailyCheckin(
     goalType: profile.goal_type,
   })
 
-  const workoutType = (formData.get('workoutType') as string) || null
-  const durationMinutes = formData.get('durationMinutes') ? Number(formData.get('durationMinutes')) : null
-  const pushups = formData.get('pushups') ? Number(formData.get('pushups')) : null
-  const pullups = formData.get('pullups') ? Number(formData.get('pullups')) : null
-  const crunches = formData.get('crunches') ? Number(formData.get('crunches')) : null
-  const squats = formData.get('squats') ? Number(formData.get('squats')) : null
-  const calories = formData.get('calories') ? Number(formData.get('calories')) : null
-  const proteinG = formData.get('proteinG') ? Number(formData.get('proteinG')) : null
-  // Users enter water in liters (e.g. "5"); stored/scored as ml internally
-  // so the personalized target formula (lib/targets.ts) doesn't need to change.
-  const waterLiters = formData.get('waterLiters') ? Number(formData.get('waterLiters')) : null
-  const waterMl = waterLiters != null ? Math.round(waterLiters * 1000) : null
-  const sleepHours = formData.get('sleepHours') ? Number(formData.get('sleepHours')) : null
-  const steps = formData.get('steps') ? Number(formData.get('steps')) : null
-  const notes = (formData.get('notes') as string) || null
+  const { waterMl, sleepHours, steps, proteinG, calories, notes, workoutEntries } = payload
+  const classic = aggregateClassicReps(workoutEntries)
 
-  // Derived, not client-trusted for scoring purposes — just a convenience
-  // flag for "did something happen today" beyond the rep counts themselves.
+  const { data: existing } = await supabase
+    .from('daily_checkins')
+    .select('workout_type, duration_minutes')
+    .eq('user_id', user.id)
+    .eq('checkin_date', date)
+    .maybeSingle()
+
+  const created = !existing
+
   const workoutDone = Boolean(
-    (pushups && pushups > 0) ||
-      (pullups && pullups > 0) ||
-      (crunches && crunches > 0) ||
-      (squats && squats > 0) ||
-      workoutType ||
-      (durationMinutes && durationMinutes > 0)
+    (classic.pushups && classic.pushups > 0) ||
+      (classic.pullups && classic.pullups > 0) ||
+      (classic.crunches && classic.crunches > 0) ||
+      (classic.squats && classic.squats > 0) ||
+      workoutEntries.length > 0 ||
+      existing?.workout_type ||
+      (existing?.duration_minutes && existing.duration_minutes > 0)
   )
 
-  // score_xp is computed here, server-side, from raw inputs + personalized
-  // targets — never read from the client, never rendered as an editable
-  // form field. This is the entire trust boundary for the scoring system.
-  const scoreXp = calculateDailyXP(
-    { pushups, pullups, crunches, squats, waterMl, sleepHours, steps, proteinG, calories },
-    targets
-  )
+  // Rollback: SCORING_VERSION=1 forces legacy classic+extra path (columns kept).
+  const useLegacyScoring = process.env.SCORING_VERSION === '1'
+
+  let scoreXp: number
+  let scoringVersion: number | null
+  let scoreBreakdown: ReturnType<typeof buildScoreBreakdown> | null
+  let prAwarded = false
+
+  if (useLegacyScoring) {
+    scoreXp =
+      calculateDailyXP(
+        {
+          pushups: classic.pushups,
+          pullups: classic.pullups,
+          crunches: classic.crunches,
+          squats: classic.squats,
+          waterMl,
+          sleepHours,
+          steps,
+          proteinG,
+          calories,
+        },
+        targets
+      ) + scoreExtraWorkoutXp(workoutEntries)
+    scoringVersion = 1
+    scoreBreakdown = null
+  } else {
+    // Scoring v2 — server trust boundary. Classic REP_WEIGHTS are not added on top.
+    const prevBest = await loadPrevBestByExercise(supabase, user.id, date)
+    const workoutScore = scoreWorkoutV2(workoutEntries, prevBest)
+    const habitXp = calculateHabitXp(
+      { waterMl, sleepHours, steps, proteinG, calories },
+      targets
+    )
+    scoreXp = workoutScore.workoutXp + habitXp
+    scoringVersion = SCORING_VERSION_V2
+    scoreBreakdown = buildScoreBreakdown(workoutScore, habitXp)
+    prAwarded = workoutScore.prBonuses.length > 0
+  }
 
   const { error: upsertError } = await supabase.from('daily_checkins').upsert(
     {
       user_id: user.id,
       checkin_date: date,
       workout_done: workoutDone,
-      workout_type: workoutType,
-      duration_minutes: durationMinutes,
-      pushups,
-      pullups,
-      crunches,
-      squats,
+      workout_type: existing?.workout_type ?? null,
+      duration_minutes: existing?.duration_minutes ?? null,
+      pushups: classic.pushups,
+      pullups: classic.pullups,
+      crunches: classic.crunches,
+      squats: classic.squats,
       calories,
       protein_g: proteinG,
       water_ml: waterMl,
       sleep_hours: sleepHours,
       steps,
       notes,
+      workout_entries: workoutEntries,
+      scoring_version: scoringVersion,
+      score_breakdown: scoreBreakdown,
       score_xp: scoreXp,
     },
     { onConflict: 'user_id,checkin_date' }
@@ -126,10 +202,6 @@ export async function upsertDailyCheckin(
     return { error: upsertError.message }
   }
 
-  // Backfilled (non-today) entries are pure historical record-keeping — they
-  // count toward total_xp below but never touch the streak, which only ever
-  // moves based on real-time logging. This is what makes it impossible to
-  // fake/repair a streak by backfilling old days.
   const profileUpdate: Record<string, unknown> = {}
   if (isToday) {
     profileUpdate.current_streak = computeNextStreak(profile.last_log_date, today, profile.current_streak)
@@ -152,5 +224,9 @@ export async function upsertDailyCheckin(
   revalidatePath('/calendar')
   revalidatePath(`/checkin/${date}`)
 
-  return { success: true }
+  return {
+    success: true,
+    created,
+    prAwarded,
+  }
 }
