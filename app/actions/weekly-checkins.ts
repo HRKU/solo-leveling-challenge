@@ -1,13 +1,20 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { currentWeekStartDate } from '@/lib/week'
 import { revalidatePath } from 'next/cache'
 
 export interface WeeklyCheckinFormState {
   error?: string
   success?: boolean
-  created?: boolean
+}
+
+function currentWeekStartDate(): string {
+  const now = new Date()
+  const day = now.getUTCDay() // 0 = Sunday
+  const diffToMonday = day === 0 ? -6 : 1 - day
+  const monday = new Date(now)
+  monday.setUTCDate(now.getUTCDate() + diffToMonday)
+  return monday.toISOString().slice(0, 10)
 }
 
 export async function submitWeeklyCheckin(
@@ -32,13 +39,6 @@ export async function submitWeeklyCheckin(
   }
 
   const weekStartDate = currentWeekStartDate()
-
-  const { data: existingWeek } = await supabase
-    .from('weekly_checkins')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('week_start_date', weekStartDate)
-    .maybeSingle()
 
   const { error: checkinError } = await supabase.from('weekly_checkins').upsert(
     {
@@ -68,5 +68,5 @@ export async function submitWeeklyCheckin(
   revalidatePath('/')
   revalidatePath('/progress')
 
-  return { success: true, created: !existingWeek }
+  return { success: true }
 }

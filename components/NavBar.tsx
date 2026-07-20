@@ -5,12 +5,13 @@ import { usePathname } from 'next/navigation'
 import { signOut } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, CalendarDays, Trophy, TrendingUp, LogOut, Swords, Sparkles } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, Trophy, Scale, TrendingUp, LogOut, Swords, Sparkles } from 'lucide-react'
 
 const LINKS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/checkin/weekly', label: 'Weekly', icon: Scale },
   { href: '/progress', label: 'Progress', icon: TrendingUp },
   { href: '/quests', label: 'Quests', icon: Sparkles },
 ]

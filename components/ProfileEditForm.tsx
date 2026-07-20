@@ -103,7 +103,7 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Current weight ({profile.current_weight_kg ?? '—'} kg) is updated via Progress weigh-ins, not here.
+            Current weight ({profile.current_weight_kg ?? '—'} kg) is updated via your weekly check-in, not here.
           </p>
         </CardContent>
         <CardFooter>
