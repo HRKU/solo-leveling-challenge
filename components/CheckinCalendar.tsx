@@ -59,7 +59,14 @@ export function CheckinCalendar({
             const breakdown = buildDayHabitBreakdown(
               dateStr,
               checkin ? toDailyCheckinInput(checkin) : null,
-              targets
+              targets,
+              checkin
+                ? {
+                    scoringVersion: checkin.scoring_version,
+                    workoutXpOverride: checkin.score_breakdown?.workoutXp ?? null,
+                    scoreXp: checkin.score_xp,
+                  }
+                : undefined
             )
             return (
               <DayCell

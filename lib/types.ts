@@ -1,5 +1,6 @@
 import type { Rank } from '@/lib/xp'
 import type { Sex, GoalType } from '@/lib/targets'
+import type { WorkoutEntry } from '@/lib/workout-logger'
 
 export interface Profile {
   id: string
@@ -38,9 +39,37 @@ export interface DailyCheckin {
   sleep_hours: number | null
   steps: number | null
   notes: string | null
+  /** Set-based workout logger payload; null on legacy rows. */
+  workout_entries: WorkoutEntry[] | null
+  /** null/1 = legacy frozen score; 2 = effort-based v2 */
+  scoring_version: number | null
+  /** Audit trail for v2 scoring; null on legacy rows. */
+  score_breakdown: ScoreBreakdown | null
   score_xp: number
   created_at: string
   updated_at: string
+}
+
+export interface ScoreBreakdownPrBonus {
+  exerciseId: string
+  prevBestKg: number
+  todayBestKg: number
+  bonus: number
+}
+
+export interface ScoreBreakdownPerExercise {
+  exerciseId: string
+  setXp: number
+}
+
+export interface ScoreBreakdown {
+  version: 2
+  workoutXp: number
+  habitXp: number
+  rawWorkout: number
+  completionBonus: number
+  prBonuses: ScoreBreakdownPrBonus[]
+  perExercise: ScoreBreakdownPerExercise[]
 }
 
 export interface WeeklyCheckin {
