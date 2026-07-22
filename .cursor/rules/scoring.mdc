@@ -10,12 +10,14 @@ XP is a trust boundary. Never accept or store a client-submitted XP value.
 
 Full formula: [`docs/SCORING.md`](../../docs/SCORING.md). Product surfaces: [`docs/PRODUCT.md`](../../docs/PRODUCT.md).
 
-- **Daily XP (v2 default):** `scoreWorkoutV2` + `calculateHabitXp` in `lib/scoring/`, called only from `app/actions/daily-checkins.ts`. Persist `scoring_version=2` and `score_breakdown`.
+- **Daily XP (v3 default):** `scoreWorkoutV3` + `calculateHabitXp` in `lib/scoring/`, called only from `app/actions/daily-checkins.ts`. Persist `scoring_version=3` and `score_breakdown`.
+- **Workout:** uncapped `difficulty × reps` (or duration × 6 XP/min). Weight logged, never scored. No PR bonuses, no soft workout cap.
 - **Rollback:** `SCORING_VERSION=1` forces legacy `calculateDailyXP` + `scoreExtraWorkoutXp`.
 - Targets: `calculateDailyTargets()` in `lib/targets.ts` (BMR/TDEE; sleep/steps fixed).
 - `profiles.total_xp` / level / rank: always via `resumTotalXp()` in `lib/xp-resum.ts` — re-sum from scratch. Never increment XP ad hoc.
 - Any new XP source must be added to `resumTotalXp()`, not given its own update path.
-- Do **not** add classic `REP_WEIGHTS` on top of v2 workout XP (double-count). Classic columns are denormalized aggregates only.
-- Habits stay capped vs targets (water 24, sleep 10, steps 10, protein 8, calories 8). Workout soft-cap 90 → hard ceiling 110; PR bonus ≤20 (kg-canonical).
+- Do **not** add classic `REP_WEIGHTS` on top of v3 workout XP (double-count). Classic columns are denormalized aggregates only.
+- Habits stay capped vs targets (water 24, sleep 10, steps 10, protein 8, calories 8).
 - Streak (`computeNextStreak`): only update for **today's** check-in. Backfills must not touch streak. A day with any check-in row counts; missing row breaks streak.
-- Water: UI uses liters; DB/scoring uses ml (`liters * 1000` in the action).
+- Water: form posts `waterMl` (ml). UI may display L when ≥1000 ml; scoring always uses ml.
+- Historical rescore: production was applied via `scripts/rescore-v3.ts --apply` (idempotent). Habit XP may shift slightly on rescore because targets use current weight.

@@ -5,13 +5,12 @@ import { calculateDailyTargets } from '@/lib/targets'
 import { calculateDailyXP, computeNextStreak } from '@/lib/xp'
 import { resumTotalXp } from '@/lib/xp-resum'
 import { parseDailyCheckinFormData } from '@/lib/validation/checkin'
-import { aggregateClassicReps, scoreExtraWorkoutXp, type WorkoutEntry } from '@/lib/workout-logger'
+import { aggregateClassicReps, scoreExtraWorkoutXp } from '@/lib/workout-logger'
 import { calculateHabitXp } from '@/lib/scoring/habits'
 import {
-  SCORING_VERSION_V2,
-  buildPrevBestKgMap,
+  SCORING_VERSION_V3,
   buildScoreBreakdown,
-  scoreWorkoutV2,
+  scoreWorkoutV3,
 } from '@/lib/scoring/v2'
 import { revalidatePath } from 'next/cache'
 
@@ -20,44 +19,10 @@ export interface CheckinFormState {
   success?: boolean
   /** True when this upsert created a new row vs updated an existing one. */
   created?: boolean
-  /** True when at least one personal-best bonus was awarded. */
-  prAwarded?: boolean
 }
 
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10)
-}
-
-async function loadPrevBestByExercise(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  excludeDate: string
-): Promise<Map<string, number>> {
-  const cutoff = new Date(`${excludeDate}T00:00:00Z`)
-  cutoff.setUTCDate(cutoff.getUTCDate() - 90)
-  const since = cutoff.toISOString().slice(0, 10)
-
-  const { data } = await supabase
-    .from('daily_checkins')
-    .select('checkin_date, workout_entries')
-    .eq('user_id', userId)
-    .neq('checkin_date', excludeDate)
-    .gte('checkin_date', since)
-    .not('workout_entries', 'is', null)
-
-  const flat: { exerciseId: string; weightUnit: 'kg' | 'lb'; sets: { weight: number | null }[] }[] = []
-  for (const row of data ?? []) {
-    const entries = row.workout_entries as WorkoutEntry[] | null
-    if (!Array.isArray(entries)) continue
-    for (const e of entries) {
-      flat.push({
-        exerciseId: e.exerciseId,
-        weightUnit: e.weightUnit === 'lb' ? 'lb' : 'kg',
-        sets: (e.sets ?? []).map((s) => ({ weight: s.weight ?? null })),
-      })
-    }
-  }
-  return buildPrevBestKgMap(flat)
 }
 
 export async function upsertDailyCheckin(
@@ -139,7 +104,6 @@ export async function upsertDailyCheckin(
   let scoreXp: number
   let scoringVersion: number | null
   let scoreBreakdown: ReturnType<typeof buildScoreBreakdown> | null
-  let prAwarded = false
 
   if (useLegacyScoring) {
     scoreXp =
@@ -160,17 +124,15 @@ export async function upsertDailyCheckin(
     scoringVersion = 1
     scoreBreakdown = null
   } else {
-    // Scoring v2 — server trust boundary. Classic REP_WEIGHTS are not added on top.
-    const prevBest = await loadPrevBestByExercise(supabase, user.id, date)
-    const workoutScore = scoreWorkoutV2(workoutEntries, prevBest)
+    // Scoring v3 — uncapped difficulty × volume. Weight ignored; no PR / soft cap.
+    const workoutScore = scoreWorkoutV3(workoutEntries)
     const habitXp = calculateHabitXp(
       { waterMl, sleepHours, steps, proteinG, calories },
       targets
     )
     scoreXp = workoutScore.workoutXp + habitXp
-    scoringVersion = SCORING_VERSION_V2
+    scoringVersion = SCORING_VERSION_V3
     scoreBreakdown = buildScoreBreakdown(workoutScore, habitXp)
-    prAwarded = workoutScore.prBonuses.length > 0
   }
 
   const { error: upsertError } = await supabase.from('daily_checkins').upsert(
@@ -227,6 +189,5 @@ export async function upsertDailyCheckin(
   return {
     success: true,
     created,
-    prAwarded,
   }
 }

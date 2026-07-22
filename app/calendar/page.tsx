@@ -9,6 +9,7 @@ export default async function CalendarPage() {
   const userId = await getCurrentUserId()
 
   const now = new Date()
+  const today = format(now, 'yyyy-MM-dd')
   const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')
   const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd')
 
@@ -33,8 +34,17 @@ export default async function CalendarPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">
-      <h1 className="text-xl font-bold sm:text-2xl">Habit calendar</h1>
-      <CheckinCalendar month={now} checkins={checkins ?? []} targets={targets} />
+      <div>
+        <h1 className="font-heading text-xl font-bold sm:text-2xl">Habit calendar</h1>
+        <p className="text-sm text-muted-foreground">Tap a day to review, backfill, or edit a check-in.</p>
+      </div>
+      <CheckinCalendar
+        monthIso={monthStart}
+        today={today}
+        checkins={checkins ?? []}
+        targets={targets}
+        currentStreak={profile!.current_streak}
+      />
     </div>
   )
 }

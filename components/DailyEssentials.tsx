@@ -22,18 +22,18 @@ export interface DailyEssentialsValues {
 
 type MetricKey = 'water' | 'steps' | 'protein' | 'calories' | 'sleep'
 
-function formatWater(ml: number | null): string {
+export function formatWater(ml: number | null): string {
   if (ml == null || ml <= 0) return '—'
   if (ml >= 1000) return `${(ml / 1000).toFixed(ml % 1000 === 0 ? 0 : 1)}`
   return String(ml)
 }
 
-function waterUnit(ml: number | null): string {
+export function waterUnit(ml: number | null): string {
   if (ml != null && ml > 0 && ml < 1000) return 'ml'
   return 'L'
 }
 
-function formatSleep(hours: number | null): string {
+export function formatSleep(hours: number | null): string {
   if (hours == null || hours <= 0) return '—'
   let h = Math.floor(hours)
   let m = Math.round((hours - h) * 60)

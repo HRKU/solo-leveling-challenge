@@ -19,6 +19,26 @@ const RANK_GLOW: Record<Rank, string> = {
   S: 'shadow-[0_0_28px_-6px] shadow-red-500/70',
 }
 
+/** Rank-tinted hero card background (e.g. dashboard) — same color families as RANK_STYLES. */
+export const RANK_HERO_BG: Record<Rank, string> = {
+  E: 'from-slate-500/10',
+  D: 'from-emerald-500/10',
+  C: 'from-blue-500/10',
+  B: 'from-violet-500/10',
+  A: 'from-orange-500/10',
+  S: 'from-red-500/10',
+}
+
+/** Rank-tinted XP progress bar gradient — same color families as RANK_STYLES. */
+export const RANK_BAR_GRADIENT: Record<Rank, string> = {
+  E: 'from-slate-400/70 to-slate-300',
+  D: 'from-emerald-500/70 to-emerald-400',
+  C: 'from-blue-500/70 to-blue-400',
+  B: 'from-violet-500/70 to-violet-400',
+  A: 'from-orange-500/70 to-orange-400',
+  S: 'from-red-500/70 to-red-400',
+}
+
 export function RankBadge({
   rank,
   level,

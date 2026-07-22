@@ -18,7 +18,7 @@ app/
   actions/            Server Actions — preferred place data gets written
     auth.ts             sign up / log in / sign out
     onboarding.ts        completes profile setup, gated by profiles.onboarded
-    daily-checkins.ts    the entire XP trust boundary lives here (scoring v2)
+    daily-checkins.ts    the entire XP trust boundary lives here (scoring v3)
     weekly-checkins.ts   weigh-in upsert; syncs profiles.current_weight_kg
     challenges.ts        post a quest, toggle your own completion
     profile.ts           edit profile fields (not weight — see Progress)
@@ -34,10 +34,10 @@ app/
   quests/                      group dares — free-text challenges, bonus XP on completion
   profile/                     edit profile + daily-reminders toggle
 
-components/            UI (components/ui/ = shadcn; components/workout/ = logger sheets)
+components/            UI (components/ui/ = shadcn; components/workout/ = logger modals)
 lib/
   supabase/             browser/server Supabase clients + the proxy session helper
-  scoring/              v2 workout formula + habit XP (see docs/SCORING.md)
+  scoring/              v3 volume formula + habit XP (see docs/SCORING.md)
   exercise-catalog.ts   seeded exercise list for the workout logger
   workout-logger.ts     entry/set helpers, classic aggregates, client XP estimate
   targets.ts            BMR/TDEE/protein/water target formulas
@@ -49,7 +49,7 @@ lib/
 
 docs/
   PRODUCT.md            product surfaces & UX contracts
-  SCORING.md            scoring v2 formula (canonical)
+  SCORING.md            scoring v3 formula (canonical)
 
 proxy.ts                Next.js 16's renamed "middleware" — session refresh,
                         auth gate, and the onboarding gate (excludes api/, sw.js,
@@ -63,14 +63,15 @@ supabase/migrations/    SQL schema, RLS policies, and the profile-creation trigg
 
 ### How scoring works
 
-See **[`docs/SCORING.md`](docs/SCORING.md)** for the full v2 formula. Short version:
+See **[`docs/SCORING.md`](docs/SCORING.md)** for the full v3 formula. Short version:
 
-- **Default path (v2):** effort-based set XP + stronger kg-canonical PR bonuses, soft workout cap (~90 → ceiling 110), plus capped habit XP. Written server-side in `upsertDailyCheckin` with `scoring_version` + `score_breakdown`. Untouched historical rows keep their stored `score_xp`.
+- **Default path (v3):** uncapped workout XP = catalogue `difficulty × reps` (or duration × 6 XP/min). Weight is logged only — it does not affect score. No PR bonuses, no soft daily workout cap. Plus capped habit XP. Written server-side in `upsertDailyCheckin` with `scoring_version` + `score_breakdown`.
 - **Habits:** water 24, sleep 10, steps 10, protein 8, calories 8 — ratio-capped vs targets ([`lib/targets.ts`](lib/targets.ts)).
-- **Do not** stack classic `REP_WEIGHTS` on top of v2 workout XP. Classic columns remain denormalized for calendar/compat.
+- **Do not** stack classic `REP_WEIGHTS` on top of v3 workout XP. Classic columns remain denormalized for calendar/compat.
 - Level requires 52×N more XP each level; ranks are E (1–3), D (4–7), C (8–12), B (13–17), A (18–23), S (24+).
 - A streak only breaks if a day has **no check-in row at all**. Backfills never touch the streak.
 - **Quests** are a second XP source; `total_xp` always comes from `resumTotalXp()` (daily scores + completed quests), never an incremental patch.
+- **Historical rescore:** production check-ins were migrated with `scripts/rescore-v3.ts --apply` (idempotent; dry-run anytime). See caveats in [`docs/SCORING.md`](docs/SCORING.md).
 - Rollback flag: `SCORING_VERSION=1` forces the legacy scoring path for new writes.
 
 Product UX (check-in, Progress hub, leaderboard champion, etc.): **[`docs/PRODUCT.md`](docs/PRODUCT.md)**.
@@ -138,7 +139,9 @@ Open [http://localhost:3000](http://localhost:3000), sign up, complete onboardin
 | `npm run build` | Production build |
 | `npm run start` | Run the production build |
 | `npm run lint` | Lint with ESLint |
-| `npx tsx scripts/scoring-v2-smoke.ts` | Scoring v2 formula smoke tests |
+| `npx tsx scripts/scoring-v3-smoke.ts` | Scoring v3 formula smoke tests |
+| `npx tsx --env-file=.env.local scripts/rescore-v3.ts` | Dry-run historical rescore to v3 |
+| `npx tsx --env-file=.env.local scripts/rescore-v3.ts --apply` | Apply rescore + resum all users |
 
 ## Installable app (PWA)
 

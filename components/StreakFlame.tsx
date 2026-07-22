@@ -11,7 +11,9 @@ export function StreakFlame({ streak, className }: { streak: number; className?:
         className
       )}
     >
-      <span aria-hidden>🔥</span>
+      <span aria-hidden className={isActive ? 'flame-flicker' : undefined}>
+        🔥
+      </span>
       <span>
         {streak} day{streak === 1 ? '' : 's'}
       </span>
