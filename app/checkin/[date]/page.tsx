@@ -1,6 +1,7 @@
 import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { calculateDailyTargets } from '@/lib/targets'
 import { DailyCheckinForm } from '@/components/DailyCheckinForm'
+import { BackfillDateHeader } from '@/components/BackfillDateHeader'
 import { notFound, redirect } from 'next/navigation'
 import type { Profile, DailyCheckin } from '@/lib/types'
 
@@ -47,12 +48,7 @@ export default async function BackfillCheckinPage({ params }: { params: Promise<
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 pb-8">
-      <div>
-        <h1 className="font-heading text-xl font-bold sm:text-2xl">Backfill a check-in</h1>
-        <p className="text-sm text-muted-foreground">
-          This won&apos;t affect your streak — it only counts toward total XP.
-        </p>
-      </div>
+      <BackfillDateHeader date={date} />
 
       <DailyCheckinForm
         key={checkin?.id ?? 'new'}

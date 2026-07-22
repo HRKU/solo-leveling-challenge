@@ -17,9 +17,18 @@ const SWORDS = `
 
 // scale = fraction of the canvas the 24px mark occupies. Maskable icons need
 // the mark inside the inner ~80% "safe zone" since platforms crop the edges.
+//
+// Neon glow: two blurred copies of the mark (wide+dim, tight+bright) sit
+// behind a brightened crisp copy on top — same technique as the live NavBar
+// icon's CSS `logo-glow` (two stacked drop-shadows), just baked into the
+// raster export since favicon/app-icon/manifest icons are static files.
+// stdDeviation is specified in the pre-scale 24-unit mark space, so it scales
+// proportionally with icon size via the group's own `scale()` transform.
+// Below 64px the wide pass is dropped — it just muddies tiny favicons.
 function iconSvg(size, scale) {
   const mark = size * scale
   const offset = (size - mark) / 2
+  const glowRegion = `x="-200%" y="-200%" width="500%" height="500%"`
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <defs>
     <radialGradient id="glow" cx="50%" cy="30%" r="80%">
@@ -27,11 +36,19 @@ function iconSvg(size, scale) {
       <stop offset="55%" stop-color="#15152a"/>
       <stop offset="100%" stop-color="#0a0a0f"/>
     </radialGradient>
+    <filter id="blurWide" ${glowRegion}><feGaussianBlur stdDeviation="1.7"/></filter>
+    <filter id="blurTight" ${glowRegion}><feGaussianBlur stdDeviation="0.65"/></filter>
   </defs>
   <rect width="${size}" height="${size}" fill="url(#glow)"/>
-  <g transform="translate(${offset} ${offset}) scale(${mark / 24})"
-     fill="none" stroke="#a5b0ff" stroke-width="2"
-     stroke-linecap="round" stroke-linejoin="round">${SWORDS}</g>
+  <g transform="translate(${offset} ${offset}) scale(${mark / 24})" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    ${
+      size >= 64
+        ? `<g stroke="#7c86ff" stroke-width="3.6" opacity="0.5" filter="url(#blurWide)">${SWORDS}</g>`
+        : ''
+    }
+    <g stroke="#a5b0ff" stroke-width="2.6" opacity="0.85" filter="url(#blurTight)">${SWORDS}</g>
+    <g stroke="#c7ceff" stroke-width="2">${SWORDS}</g>
+  </g>
 </svg>`
 }
 

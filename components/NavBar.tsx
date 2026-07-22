@@ -29,7 +29,7 @@ export function NavBar() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
           <Link href="/" className="flex shrink-0 items-center gap-2">
-            <Swords className="size-5 shrink-0 text-primary" strokeWidth={2.25} />
+            <Swords className="logo-glow size-5 shrink-0 text-primary" strokeWidth={2.25} />
             <span className="font-heading text-sm font-semibold tracking-wide whitespace-nowrap text-foreground">
               SOLO LEVELING
             </span>

@@ -1,6 +1,6 @@
-# Scoring (v2)
+# Scoring (v3)
 
-Canonical reference for daily XP. Source of truth in code: [`lib/scoring/v2.ts`](../lib/scoring/v2.ts), habits in [`lib/scoring/habits.ts`](../lib/scoring/habits.ts), written only from [`app/actions/daily-checkins.ts`](../app/actions/daily-checkins.ts).
+Canonical reference for daily XP. Source of truth in code: [`lib/scoring/v2.ts`](../lib/scoring/v2.ts) (`scoreWorkoutV3`), habits in [`lib/scoring/habits.ts`](../lib/scoring/habits.ts), written only from [`app/actions/daily-checkins.ts`](../app/actions/daily-checkins.ts).
 
 **Never trust a client-submitted XP value.**
 
@@ -10,76 +10,44 @@ Canonical reference for daily XP. Source of truth in code: [`lib/scoring/v2.ts`]
 score_xp = round(workoutXp) + round(habitXp)
 ```
 
-- **Workout XP** — effort-based sets + optional personal-best bonuses, soft-capped.
-- **Habit XP** — water / sleep / steps / protein / calories vs personalized targets (unchanged capped ratios).
-- Classic `REP_WEIGHTS` (pushups×1, etc.) are **not** added on top of v2 (that would double-count). Classic columns remain denormalized for calendar/compat via `aggregateClassicReps`.
+- **Workout XP** — uncapped `difficulty × volume` (reps or duration). Weight is **logged but never scored**.
+- **Habit XP** — water / sleep / steps / protein / calories vs personalized targets (capped ratios).
+- Classic `REP_WEIGHTS` are **not** added on top (would double-count). Classic columns remain denormalized via `aggregateClassicReps`.
+- No per-set ceiling, no soft daily workout cap, no PR bonuses.
 
 ## Units
 
-- **Kilograms are canonical** for all PR comparisons and stored breakdown fields (`prevBestKg`, `todayBestKg`).
-- UI may accept `lb`; convert with `lbToKg` before scoring.
-- Catalogue `difficulty` (~0.1–2.0) multiplies set effort.
+- Catalogue `difficulty` (~0.1–2.0) multiplies set volume.
+- UI may accept `lb` for logging; scoring ignores load entirely.
+- Duration rate: **6 XP per minute** at difficulty 1 (`DURATION_XP_PER_MINUTE`).
 
 ## Per completed set
 
 A set counts if `reps > 0` or `durationSec > 0`.
 
-**Set base:** `+2`
-
-### Bodyweight / weighted reps (load ignored for volume)
+### Bodyweight / weighted reps (load ignored)
 
 ```
-repEffort = min(reps, 20) * 0.4
-          + max(0, min(reps, 50) - 20) * 0.15
-setXp = min(difficulty * (2 + repEffort), 12)
+setXp = difficulty × reps
 ```
-
-Reps above 50 add nothing.
 
 ### Duration / weighted duration
 
 ```
-minutes = durationSec / 60
-durEffort = min(minutes, 1) * 6
-          + max(0, min(minutes, 5) - 1) * 2
-setXp = min(difficulty * (2 + durEffort), 12)
+setXp = difficulty × (durationSec / 60) × 6
 ```
-
-Duration beyond 5 minutes per set adds nothing.
-
-## Personal-best bonus (weighted modes only)
-
-Once per exercise per day:
-
-1. `todayBestKg` = max set weight that day (after lb→kg).
-2. `prevBestKg` = max prior weight (kg) for that `exerciseId` on other dates (lookup window: last 90 days).
-3. No prior best → bonus `0` (first logged lift is baseline).
-4. If `todayBestKg > prevBestKg`:
-
-```
-rel = min((todayBestKg - prevBestKg) / prevBestKg, 0.30)
-scaled = rel / 0.30
-prBonus = min(20, 12 + 8 * scaled)
-```
-
-Barely beat prior ≈ **+12**; ~30% relative improvement ≈ **+20** (cap).
 
 ## Daily workout rollup
 
 ```
-rawWorkout = sum(setXp) + sum(prBonus) + completionBonus
-completionBonus = 5 if at least one completed set else 0
-
-SOFT = 90, CEIL = 110
-if rawWorkout <= SOFT:
-  workoutXp = rawWorkout
-else:
-  workoutXp = min(CEIL, SOFT + (rawWorkout - SOFT) * 0.25)
+workoutXp = round(sum(setXp))
 ```
+
+No completion bonus, no soft/hard ceiling. Same total reps score the same whether logged as one set or many.
 
 ## Habits
 
-From [`lib/scoring/habits.ts`](../lib/scoring/habits.ts) (same caps as legacy):
+From [`lib/scoring/habits.ts`](../lib/scoring/habits.ts):
 
 | Habit | Max XP | Notes |
 |---|---|---|
@@ -95,39 +63,45 @@ Linear ratio, capped at 1.0 (no overshoot bonus).
 
 Columns on `daily_checkins` (migration `0007`):
 
-- `scoring_version` — `null`/`1` = legacy frozen score; `2` = v2
-- `score_breakdown` — JSON audit trail (`workoutXp`, `habitXp`, `prBonuses`, `perExercise`, …)
+- `scoring_version` — `null`/`1` = legacy; `2` = historical capped+PR; `3` = volume (current)
+- `score_breakdown` — JSON audit (`workoutXp`, `habitXp`, `rawWorkout`, `perExercise`)
 
-**History rule:** untouched rows keep stored `score_xp`. Saving a day again recomputes with **v2** and stamps version + breakdown. `profiles.total_xp` always via `resumTotalXp()`.
+**Production status:** existing check-ins were backfilled with [`scripts/rescore-v3.ts`](../scripts/rescore-v3.ts) `--apply` and every profile was re-summed via `resumTotalXp()`. Live rows should be `scoring_version = 3`. Re-running the script is idempotent (safe to dry-run anytime).
+
+**Backfill caveats (observed):**
+
+- Days with only classic columns (no `workout_entries`) rescore from pushups/pullups/squats/crunches only.
+- Habit XP uses **current** profile weight/goal for targets, so a day can move by a few points even when workout volume is unchanged (habit “target drift”).
+- Soft-capped / set-capped v2 days can jump a lot when uncapped; leaderboard order can change.
+
+`profiles.total_xp` always via `resumTotalXp()`.
 
 ## Rollback
 
-Set env `SCORING_VERSION=1` to force the legacy classic + extra-workout path for new writes (columns kept). Default is v2.
+Set env `SCORING_VERSION=1` to force the legacy classic + extra-workout path for new writes (columns kept). Default is v3.
 
 ## Client estimates
 
-UI “~XP” badges use `estimateWorkoutXpV2` without PR history. Server remains authoritative; optional toast when a PR bonus is awarded.
+UI “~XP” badges use `estimateWorkoutXpV3` / `estimateWorkoutXp` — same formula as the server (no PR path).
 
 ## Caps cheat-sheet
 
 | Rule | Value |
 |---|---|
-| Per-set XP | ≤ 12 |
-| Reps counted / set | ≤ 50 |
-| Duration counted / set | ≤ 5 min |
-| PR bonus / exercise / day | ≤ 20 |
-| Soft workout cap | 90 |
-| Hard workout ceiling | 110 |
+| Per-set / daily workout XP | **uncapped** (input Zod limits only) |
+| Duration XP / min @ diff 1 | 6 |
 | Habit max | ~60 |
+| Weight → XP | none (logging only) |
 
 ## Smoke tests
 
 ```bash
-npx tsx scripts/scoring-v2-smoke.ts
+npx tsx scripts/scoring-v3-smoke.ts
 ```
 
-Post-deploy checklist: [`scripts/scoring-v2-verify.md`](../scripts/scoring-v2-verify.md).
+Post-deploy / backfill checklist: [`scripts/scoring-v3-verify.md`](../scripts/scoring-v3-verify.md).
 
-## Legacy (v1)
+## Legacy
 
-`calculateDailyXP` in `lib/xp.ts` + `scoreExtraWorkoutXp` remain for rollback / reference. Prefer v2 for all new product behavior.
+- **v1:** `calculateDailyXP` + `scoreExtraWorkoutXp` (rollback via `SCORING_VERSION=1`).
+- **v2:** effort curves + soft cap 90→110 + PR bonuses — superseded; production rows were rescored to v3.

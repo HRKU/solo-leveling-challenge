@@ -1,11 +1,8 @@
 import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { calculateDailyTargets } from '@/lib/targets'
-import { RankBadge } from '@/components/RankBadge'
-import { XPBar } from '@/components/XPBar'
-import { StreakFlame } from '@/components/StreakFlame'
+import { DashboardHero } from '@/components/DashboardHero'
 import { DailyCheckinForm } from '@/components/DailyCheckinForm'
 import { BackfillDatePicker } from '@/components/BackfillDatePicker'
-import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
 import type { Profile, DailyCheckin } from '@/lib/types'
@@ -51,15 +48,12 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-3">
-            <RankBadge rank={profile!.rank} level={profile!.level} size="lg" />
-            <StreakFlame streak={profile!.current_streak} />
-          </div>
-          <XPBar totalXp={profile!.total_xp} />
-        </CardContent>
-      </Card>
+      <DashboardHero
+        rank={profile!.rank}
+        level={profile!.level}
+        totalXp={profile!.total_xp}
+        currentStreak={profile!.current_streak}
+      />
 
       <DailyCheckinForm
         key={todayCheckin?.id ?? 'new'}

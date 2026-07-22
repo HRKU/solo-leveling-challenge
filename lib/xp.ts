@@ -176,8 +176,8 @@ function statusFromRatio(earned: number, max: number): HabitStatus {
 /**
  * Collapses the scored inputs into 4 priority-ordered habit dots for the
  * calendar view: Workout -> Water -> Sleep & Steps -> Nutrition.
- * For scoring v2 rows, pass workoutXpOverride from score_breakdown.workoutXp
- * so the workout dot matches the stored effort-based score.
+ * For scoring v2/v3 rows, pass workoutXpOverride from score_breakdown.workoutXp
+ * so the workout dot matches the stored workout score.
  */
 export function buildDayHabitBreakdown(
   date: string,
@@ -203,9 +203,12 @@ export function buildDayHabitBreakdown(
     }
   }
 
-  const useV2 = options?.scoringVersion === 2 && options.workoutXpOverride != null
-  const workoutPoints = useV2 ? options.workoutXpOverride! : repPoints(checkin)
-  const workoutPointsMax = useV2 ? 90 : REP_REFERENCE_MAX
+  const scoringVersion = options?.scoringVersion ?? null
+  const useStoredWorkoutXp =
+    (scoringVersion === 2 || scoringVersion === 3) && options?.workoutXpOverride != null
+  const workoutPoints = useStoredWorkoutXp ? options.workoutXpOverride! : repPoints(checkin)
+  // Visual “solid session” reference for calendar coloring (not an XP cap).
+  const workoutPointsMax = useStoredWorkoutXp ? 90 : REP_REFERENCE_MAX
 
   const waterPoints = 24 * ratio(checkin.waterMl, targets.waterTarget)
   const sleepStepsPoints =

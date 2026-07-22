@@ -11,6 +11,7 @@ import type { DailyCheckin } from '@/lib/types'
 import type { DailyTargets } from '@/lib/targets'
 import { dailyCheckinPayloadSchema } from '@/lib/validation/checkin'
 import { hydrateWorkoutEntries, type WorkoutEntry } from '@/lib/workout-logger'
+import { formatCheckinDateHeading } from '@/lib/date-format'
 
 export function DailyCheckinForm({
   date,
@@ -48,13 +49,10 @@ export function DailyCheckinForm({
     } else {
       toast.success(isToday ? "Today's check-in updated." : `Check-in for ${date} updated.`)
     }
-    if (state.prAwarded) {
-      toast.success('New personal best — bonus XP awarded.')
-    }
   }, [state, date, isToday])
 
   const titleVerb = checkin ? 'Edit' : 'Log'
-  const titleWhen = isToday ? "today's" : date
+  const titleWhen = isToday ? "today's" : formatCheckinDateHeading(date)
 
   function validateBeforeSubmit(form: HTMLFormElement): boolean {
     const fd = new FormData(form)

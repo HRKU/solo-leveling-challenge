@@ -202,3 +202,60 @@
     opacity: 1;
   }
 }
+
+/* Streak flame — subtle idle flicker while a streak is active (StreakFlame). */
+@keyframes flame-flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.08) rotate(-4deg);
+    opacity: 0.88;
+  }
+  50% {
+    transform: scale(0.95) rotate(3deg);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.05) rotate(-2deg);
+    opacity: 0.92;
+  }
+}
+
+.flame-flicker {
+  display: inline-block;
+  transform-origin: 50% 90%;
+  animation: flame-flicker 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flame-flicker {
+    animation: none;
+  }
+}
+
+/* App logo (NavBar sword icon) — subtle neon idle glow. */
+@keyframes logo-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px color-mix(in oklch, var(--primary) 70%, transparent))
+      drop-shadow(0 0 1px color-mix(in oklch, var(--primary) 90%, transparent));
+  }
+  50% {
+    filter: drop-shadow(0 0 7px color-mix(in oklch, var(--primary) 90%, transparent))
+      drop-shadow(0 0 2px color-mix(in oklch, var(--primary) 100%, transparent));
+  }
+}
+
+.logo-glow {
+  animation: logo-glow 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-glow {
+    animation: none;
+    filter: drop-shadow(0 0 4px color-mix(in oklch, var(--primary) 80%, transparent));
+  }
+}

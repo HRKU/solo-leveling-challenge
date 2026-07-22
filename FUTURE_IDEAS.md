@@ -29,7 +29,7 @@ Just a dump of directions worth considering next. Nothing here is scoped or comm
 
 - **Installable PWA** — web manifest, icon set, Apple web-app meta; installs to home screen / standalone.
 - **Push reminders** — per-device opt-in on `/profile`, `push_subscriptions`, Vercel crons → `/api/reminders` (morning nudge + evening streak warning). Service worker (`public/sw.js`) handles **push display only** — no offline caching.
-- **Workout logger + scoring v2** — catalogue sets, `workout_entries` jsonb, effort/PR scoring with soft caps; see `docs/SCORING.md`.
+- **Workout logger + scoring v3** — catalogue sets, `workout_entries` jsonb, uncapped difficulty×volume XP (weight logged only); historical rows rescored; see `docs/SCORING.md`.
 - **Progress hub** — weekly weigh-in merged into `/progress` (modal + shadcn weight chart); `/checkin/weekly` redirects.
 - **Leaderboard champion** — #1 special card with subtle gold glow.
 

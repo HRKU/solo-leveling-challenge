@@ -41,15 +41,16 @@ export interface DailyCheckin {
   notes: string | null
   /** Set-based workout logger payload; null on legacy rows. */
   workout_entries: WorkoutEntry[] | null
-  /** null/1 = legacy frozen score; 2 = effort-based v2 */
+  /** null/1 = legacy; 2 = capped effort+PR (historical); 3 = uncapped volume */
   scoring_version: number | null
-  /** Audit trail for v2 scoring; null on legacy rows. */
+  /** Audit trail for v2/v3 scoring; null on legacy rows. */
   score_breakdown: ScoreBreakdown | null
   score_xp: number
   created_at: string
   updated_at: string
 }
 
+/** Present on historical v2 breakdowns only. */
 export interface ScoreBreakdownPrBonus {
   exerciseId: string
   prevBestKg: number
@@ -63,13 +64,15 @@ export interface ScoreBreakdownPerExercise {
 }
 
 export interface ScoreBreakdown {
-  version: 2
+  version: 2 | 3
   workoutXp: number
   habitXp: number
   rawWorkout: number
-  completionBonus: number
-  prBonuses: ScoreBreakdownPrBonus[]
   perExercise: ScoreBreakdownPerExercise[]
+  /** v2 only — omitted on v3 writes */
+  completionBonus?: number
+  /** v2 only — omitted on v3 writes */
+  prBonuses?: ScoreBreakdownPrBonus[]
 }
 
 export interface WeeklyCheckin {

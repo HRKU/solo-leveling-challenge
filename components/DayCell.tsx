@@ -23,12 +23,15 @@ export function DayCell({
   breakdown,
   isToday,
   isFuture,
+  onSelectPast,
 }: {
   date: string
   dayNumber: number
   breakdown: DayHabitBreakdown | null
   isToday: boolean
   isFuture: boolean
+  /** Called for past (non-today) dates — opens the day-details/backfill modal instead of navigating directly. */
+  onSelectPast: (date: string) => void
 }) {
   const hasCheckin = breakdown?.hasCheckin ?? false
   const score = breakdown?.score ?? 0
@@ -36,7 +39,9 @@ export function DayCell({
 
   const content = (
     <>
-      <span className="text-xs tabular-nums text-muted-foreground">{dayNumber}</span>
+      <span className={cn('text-xs tabular-nums', isToday ? 'font-bold text-foreground' : 'font-medium text-foreground/70')}>
+        {dayNumber}
+      </span>
       {hasCheckin && (
         <div className="flex items-center gap-0.5">
           {breakdown!.habits.map((habit) => (
@@ -52,10 +57,11 @@ export function DayCell({
   )
 
   const className = cn(
-    'flex aspect-square flex-col items-center justify-center gap-1 rounded-md border p-1',
-    isToday ? 'border-primary' : 'border-transparent',
+    'flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-border/60 p-1 select-none',
+    isToday && 'ring-2 ring-inset ring-primary',
     !hasCheckin && 'opacity-40',
-    !isFuture && 'transition-colors hover:border-primary/50 hover:bg-muted/50'
+    isFuture && 'cursor-not-allowed',
+    !isFuture && 'transition hover:border-primary/50 hover:bg-muted/50 active:scale-95'
   )
   const style = hasCheckin
     ? { backgroundColor: `color-mix(in oklch, var(--primary) ${bgOpacity * 60}%, transparent)` }
@@ -63,20 +69,38 @@ export function DayCell({
 
   if (isFuture) {
     return (
-      <div className={className} style={style} title="No check-in">
+      <div className={className} style={style} title="No check-in — future date" aria-disabled="true">
         {content}
       </div>
     )
   }
 
+  // Today always jumps straight to its check-in (same page the dashboard
+  // uses) — no confirmation modal in the way of logging today.
+  if (isToday) {
+    return (
+      <Link
+        href={`/checkin/${date}`}
+        className={className}
+        style={style}
+        title={hasCheckin ? `Score: ${score} — today's check-in` : "Today — log your check-in"}
+      >
+        {content}
+      </Link>
+    )
+  }
+
+  // Past dates open a modal first (backfill confirm, or a day-details
+  // review) instead of navigating immediately.
   return (
-    <Link
-      href={`/checkin/${date}`}
+    <button
+      type="button"
+      onClick={() => onSelectPast(date)}
       className={className}
       style={style}
-      title={hasCheckin ? `Score: ${score} — click to edit` : 'No check-in — click to log'}
+      title={hasCheckin ? `Score: ${score} — click to view` : 'No check-in — click to log'}
     >
       {content}
-    </Link>
+    </button>
   )
 }

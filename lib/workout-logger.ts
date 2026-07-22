@@ -172,7 +172,7 @@ export function scoreExtraWorkoutXp(entries: WorkoutEntry[]): number {
   return entries.reduce((sum, e) => sum + scoreEntryXp(e), 0)
 }
 
-/** UI estimate — v2 effort XP without PR history (server adds PRs). */
+/** UI estimate — v3 volume XP (matches server; weight ignored). */
 export function estimateEntryXp(entry: WorkoutEntry): number {
   return estimateWorkoutXpV2([entry])
 }
