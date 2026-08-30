@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateDailyTargets } from '@/lib/targets'
 import { calculateDailyXP, computeNextStreak } from '@/lib/xp'
 import { resumTotalXp } from '@/lib/xp-resum'
@@ -37,6 +38,7 @@ export async function upsertDailyCheckin(
   if (!user) {
     return { error: 'Not authenticated.' }
   }
+  const admin = createAdminClient()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -135,7 +137,7 @@ export async function upsertDailyCheckin(
     scoreBreakdown = buildScoreBreakdown(workoutScore, habitXp)
   }
 
-  const { error: upsertError } = await supabase.from('daily_checkins').upsert(
+  const { error: upsertError } = await admin.from('daily_checkins').upsert(
     {
       user_id: user.id,
       checkin_date: date,
@@ -170,12 +172,12 @@ export async function upsertDailyCheckin(
     profileUpdate.last_log_date = today
   }
 
-  const { totalXp, level, rank } = await resumTotalXp(supabase, user.id)
+  const { totalXp, level, rank } = await resumTotalXp(admin, user.id)
   profileUpdate.total_xp = totalXp
   profileUpdate.level = level
   profileUpdate.rank = rank
 
-  const { error: profileError } = await supabase.from('profiles').update(profileUpdate).eq('id', user.id)
+  const { error: profileError } = await admin.from('profiles').update(profileUpdate).eq('id', user.id)
 
   if (profileError) {
     return { error: profileError.message }

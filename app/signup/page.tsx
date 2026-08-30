@@ -43,6 +43,17 @@ export default function SignupPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} />
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="inviteCode">Group invite code</Label>
+              <Input
+                id="inviteCode"
+                name="inviteCode"
+                type="password"
+                autoComplete="off"
+                placeholder="Ask the group organizer"
+                required
+              />
+            </div>
             {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
