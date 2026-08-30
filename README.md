@@ -109,6 +109,7 @@ npm install
    - [`supabase/migrations/0005_reps_squats_drop_situps.sql`](supabase/migrations/0005_reps_squats_drop_situps.sql) (merge situps → crunches, add squats)
    - [`supabase/migrations/0006_workout_entries.sql`](supabase/migrations/0006_workout_entries.sql) (`workout_entries` jsonb on daily check-ins)
    - [`supabase/migrations/0007_scoring_version.sql`](supabase/migrations/0007_scoring_version.sql) (`scoring_version` + `score_breakdown`)
+   - [`supabase/migrations/0008_protect_server_derived_fields.sql`](supabase/migrations/0008_protect_server_derived_fields.sql) (blocks direct writes to XP/rank/streak and score fields)
 
 This creates the `profiles`, `daily_checkins`, `weekly_checkins`, `challenges` / `challenge_completions`, and `push_subscriptions` tables, all Row Level Security policies, and the trigger that auto-creates a profile row on signup.
 
@@ -119,11 +120,27 @@ In the Supabase dashboard, go to **Settings → API** and copy the **Project URL
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+GROUP_INVITE_CODE=choose-a-long-random-group-code
 ```
 
-Those two are enough for local login/check-ins. To exercise push reminders locally you also need the VAPID/cron/service-role vars listed under [Push notification reminders](#push-notification-reminders) (already set in Vercel production).
+The service-role key and invite code are server-only; never prefix them with
+`NEXT_PUBLIC_` or expose them to browser code. The service role is used only
+after a Server Action has authenticated and validated the request.
 
-### 5. Run it
+### 5. Make signup invite-only
+
+In the Supabase dashboard, open **Authentication → Sign In / Providers →
+Email** and disable **Allow new users to sign up**. Existing users can still
+log in. New members must use this app's `/signup` form with `GROUP_INVITE_CODE`;
+the server creates the account through the Auth Admin API.
+
+This dashboard setting is required in production. Without it, someone could
+bypass the app's invite form and call Supabase Auth's public signup endpoint
+directly. Local Supabase has the equivalent setting disabled in
+`supabase/config.toml`.
+
+### 6. Run it
 
 ```bash
 npm run dev
@@ -163,7 +180,8 @@ Required env vars (all set in Vercel production):
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | VAPID public key, used by the browser to subscribe |
 | `VAPID_PRIVATE_KEY` | VAPID private key, used by the sender (server-only) |
 | `CRON_SECRET` | Vercel sends it as a Bearer token on cron invocations; the route rejects everything else |
-| `SUPABASE_SERVICE_ROLE_KEY` | Lets the cron sender read subscriptions without a user session (server-only, bypasses RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only privileged client for validated scoring/auth writes and the reminder cron |
+| `GROUP_INVITE_CODE` | Server-only code required by the signup Server Action |
 
 Regenerate VAPID keys with `npx web-push generate-vapid-keys` (invalidates all existing subscriptions). Test a send manually: `curl -H "Authorization: Bearer $CRON_SECRET" https://<deployment>/api/reminders`. iPhone users must install the PWA (iOS 16.4+) before the toggle works; Android works in-browser or installed.
 

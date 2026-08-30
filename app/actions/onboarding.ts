@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import type { Sex, GoalType } from '@/lib/targets'
 
@@ -20,6 +21,7 @@ export async function completeOnboarding(
   if (!user) {
     return { error: 'Not authenticated.' }
   }
+  const admin = createAdminClient()
 
   const name = (formData.get('name') as string)?.trim()
   const age = Number(formData.get('age'))
@@ -37,7 +39,7 @@ export async function completeOnboarding(
     return { error: 'Please enter realistic values.' }
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('profiles')
     .update({
       name,

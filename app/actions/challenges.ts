@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { resumTotalXp } from '@/lib/xp-resum'
 import { revalidatePath } from 'next/cache'
 
@@ -78,6 +79,7 @@ export async function toggleChallengeCompletion(
   if (!user) {
     return { error: 'Not authenticated.' }
   }
+  const admin = createAdminClient()
 
   const challengeId = formData.get('challengeId') as string
   // The *next* state to set, sent by the client (it knows its own current
@@ -106,9 +108,9 @@ export async function toggleChallengeCompletion(
 
   // Self-healing resum — identical philosophy to upsertDailyCheckin: never
   // trust an incremental +xp_reward / -xp_reward adjustment.
-  const { totalXp, level, rank } = await resumTotalXp(supabase, user.id)
+  const { totalXp, level, rank } = await resumTotalXp(admin, user.id)
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await admin
     .from('profiles')
     .update({ total_xp: totalXp, level, rank })
     .eq('id', user.id)
