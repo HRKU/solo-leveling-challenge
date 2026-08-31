@@ -35,8 +35,17 @@ export async function completeOnboarding(
   if (!name || !age || !sex || !heightCm || !startingWeightKg || !goalType) {
     return { error: 'Please fill in all required fields.' }
   }
+  if (!['male', 'female', 'other'].includes(sex)) {
+    return { error: 'Please select a valid sex.' }
+  }
+  if (!['lose', 'gain', 'maintain'].includes(goalType)) {
+    return { error: 'Please select a valid goal.' }
+  }
   if (age <= 0 || age >= 130 || heightCm <= 0 || startingWeightKg <= 0) {
     return { error: 'Please enter realistic values.' }
+  }
+  if (targetWeightKg != null && (!Number.isFinite(targetWeightKg) || targetWeightKg <= 0)) {
+    return { error: 'Please enter a valid target weight.' }
   }
 
   const { error } = await admin
@@ -58,5 +67,5 @@ export async function completeOnboarding(
     return { error: error.message }
   }
 
-  redirect('/')
+  redirect('/awakening')
 }

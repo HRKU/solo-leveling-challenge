@@ -12,6 +12,7 @@ import type { DailyTargets } from '@/lib/targets'
 import { dailyCheckinPayloadSchema } from '@/lib/validation/checkin'
 import { hydrateWorkoutEntries, type WorkoutEntry } from '@/lib/workout-logger'
 import { formatCheckinDateHeading } from '@/lib/date-format'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 
 export function DailyCheckinForm({
   date,
@@ -119,7 +120,16 @@ export function DailyCheckinForm({
         </CardContent>
         <CardFooter className="sticky bottom-0 z-10 border-t border-border/40 bg-card/95 pt-4 backdrop-blur supports-[backdrop-filter]:bg-card/80">
           <Button type="submit" disabled={pending} className="min-h-11 w-full" size="lg" aria-busy={pending}>
-            {pending ? 'Saving…' : checkin ? 'Update check-in' : 'Save check-in'}
+            {pending ? (
+              <span className="flex items-center gap-2">
+                <NoxPixelMascot state="loading" decorative className="-my-2 size-8" />
+                Securing check-in...
+              </span>
+            ) : checkin ? (
+              'Update check-in'
+            ) : (
+              'Save check-in'
+            )}
           </Button>
         </CardFooter>
       </form>

@@ -2,7 +2,8 @@
 
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
-import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { InfoIcon, TriangleAlertIcon } from "lucide-react"
+import { NoxPixelMascot } from "@/components/NoxPixelMascot"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
@@ -13,7 +14,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       icons={{
         success: (
-          <CircleCheckIcon className="size-4" />
+          <NoxPixelMascot state="success" decorative className="-m-1.5 size-7" />
         ),
         info: (
           <InfoIcon className="size-4" />
@@ -22,10 +23,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           <TriangleAlertIcon className="size-4" />
         ),
         error: (
-          <OctagonXIcon className="size-4" />
+          <NoxPixelMascot state="error" decorative className="-m-1.5 size-7" />
         ),
         loading: (
-          <Loader2Icon className="size-4 animate-spin" />
+          <NoxPixelMascot state="loading" decorative className="-m-1.5 size-7" />
         ),
       }}
       style={

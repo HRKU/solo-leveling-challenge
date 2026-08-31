@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Scale, Percent } from 'lucide-react'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 
 export function WeeklyCheckinForm({
   currentWeightKg,
@@ -68,7 +69,14 @@ export function WeeklyCheckinForm({
         />
       </div>
       <Button type="submit" disabled={pending} className="w-full" size="lg">
-        {pending ? 'Saving...' : submitLabel}
+        {pending ? (
+          <span className="flex items-center gap-2">
+            <NoxPixelMascot state="loading" decorative className="-my-2 size-8" />
+            Recording progress...
+          </span>
+        ) : (
+          submitLabel
+        )}
       </Button>
     </form>
   )

@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { LoaderCircle, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 import { BottomSheet } from '@/components/workout/BottomSheet'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -58,7 +59,11 @@ export function ExercisePickerSheet({
               aria-busy={searching}
             />
             {searching && (
-              <LoaderCircle className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              <NoxPixelMascot
+                state="loading"
+                decorative
+                className="absolute top-1/2 right-2 size-7 -translate-y-1/2"
+              />
             )}
           </div>
 

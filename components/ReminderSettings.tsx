@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { savePushSubscription, deletePushSubscription } from '@/app/actions/push'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 
 // PushManager.subscribe wants the VAPID public key as an ArrayBuffer-backed
 // Uint8Array (Uint8Array.from() types as ArrayBufferLike, which TS rejects).
@@ -101,12 +102,15 @@ export function ReminderSettings() {
             </p>
           </div>
         </div>
-        <Switch
-          checked={enabled}
-          onCheckedChange={toggle}
-          disabled={support !== 'supported' || pending}
-          aria-label="Toggle daily reminders"
-        />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {pending ? <NoxPixelMascot state="loading" decorative className="size-8" /> : null}
+          <Switch
+            checked={enabled}
+            onCheckedChange={toggle}
+            disabled={support !== 'supported' || pending}
+            aria-label="Toggle daily reminders"
+          />
+        </div>
       </CardContent>
     </Card>
   )
