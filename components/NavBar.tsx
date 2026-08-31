@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from '@/app/actions/auth'
-import { Button } from '@/components/ui/button'
+import { NoxBrandMark } from '@/components/NoxBrandMark'
+import { SignOutDialog } from '@/components/SignOutDialog'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, CalendarDays, Trophy, TrendingUp, LogOut, Swords, Sparkles } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, Trophy, TrendingUp, Sparkles, Settings } from 'lucide-react'
 
 const LINKS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,7 +15,14 @@ const LINKS = [
   { href: '/quests', label: 'Quests', icon: Sparkles },
 ]
 
-const HIDDEN_ROUTES = ['/login', '/signup', '/onboarding']
+const HIDDEN_ROUTES = [
+  '/login',
+  '/signup',
+  '/onboarding',
+  '/forgot-password',
+  '/update-password',
+  '/awakening',
+]
 
 export function NavBar() {
   const pathname = usePathname()
@@ -29,7 +36,7 @@ export function NavBar() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
           <Link href="/" className="flex shrink-0 items-center gap-2">
-            <Swords className="logo-glow size-5 shrink-0 text-primary" strokeWidth={2.25} />
+            <NoxBrandMark compact />
             <span className="font-heading text-sm font-semibold tracking-wide whitespace-nowrap text-foreground">
               SOLO LEVELING
             </span>
@@ -55,17 +62,19 @@ export function NavBar() {
             })}
           </nav>
 
-          <form action={signOut} className="shrink-0">
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Sign out"
-              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          <div className="flex items-center gap-1">
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className={cn(
+                'flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                pathname === '/settings' && 'bg-muted text-foreground'
+              )}
             >
-              <LogOut className="size-4" strokeWidth={2} />
-            </Button>
-          </form>
+              <Settings className="size-4" strokeWidth={2} />
+            </Link>
+            <SignOutDialog compact />
+          </div>
         </div>
       </header>
 

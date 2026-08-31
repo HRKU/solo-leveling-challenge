@@ -2,6 +2,7 @@ import { Crown } from 'lucide-react'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { RankBadge } from '@/components/RankBadge'
 import { StreakFlame } from '@/components/StreakFlame'
+import { NoxStatusCard } from '@/components/NoxStatusCard'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
 
@@ -83,9 +84,12 @@ function ChampionCard({ profile, isYou }: { profile: Profile; isYou: boolean }) 
 export function Leaderboard({ profiles, currentUserId }: { profiles: Profile[]; currentUserId: string }) {
   if (profiles.length === 0) {
     return (
-      <p className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-        No hunters on the board yet.
-      </p>
+      <NoxStatusCard
+        state="idle"
+        eyebrow="NOX // ARENA WATCH"
+        title="The arena is quiet"
+        description="No ranked Hunters have appeared yet. The first completed missions will populate the board."
+      />
     )
   }
 

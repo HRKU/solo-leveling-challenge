@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import type { Challenge, Profile } from '@/lib/types'
 import { Zap } from 'lucide-react'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 
 function initials(name: string) {
   return name
@@ -69,7 +70,10 @@ export function ChallengeCard({
       </CardContent>
       <CardFooter className="flex items-center justify-between gap-3">
         <Label htmlFor={`complete-${challenge.id}`} className="text-sm">
-          {isCompleted ? 'Completed' : 'Mark as done'}
+          <span className="flex items-center gap-2">
+            {pending ? <NoxPixelMascot state="loading" decorative className="-my-2 size-8" /> : null}
+            {pending ? 'Updating quest...' : isCompleted ? 'Completed' : 'Mark as done'}
+          </span>
         </Label>
         <form ref={formRef} action={action}>
           <input type="hidden" name="challengeId" value={challenge.id} />

@@ -3,6 +3,7 @@ import { calculateDailyTargets } from '@/lib/targets'
 import { DashboardHero } from '@/components/DashboardHero'
 import { DailyCheckinForm } from '@/components/DailyCheckinForm'
 import { BackfillDatePicker } from '@/components/BackfillDatePicker'
+import { NoxStatusCard } from '@/components/NoxStatusCard'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
 import type { Profile, DailyCheckin } from '@/lib/types'
@@ -40,13 +41,27 @@ export default async function DashboardPage() {
           <p className="text-sm text-muted-foreground">Keep the streak alive.</p>
         </div>
         <Link
-          href="/profile"
+          href="/settings"
           className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <Settings className="size-3.5" strokeWidth={2} />
-          Edit profile
+          Settings
         </Link>
       </div>
+
+      <NoxStatusCard
+        state={todayCheckin ? 'success' : 'idle'}
+        title={todayCheckin ? 'Daily quest secured' : "Nox's daily directive"}
+        description={
+          todayCheckin
+            ? `Today's check-in is recorded. Your ${profile!.current_streak}-day streak is protected.`
+            : profile!.current_streak > 0
+              ? `Complete today's check-in to protect your ${profile!.current_streak}-day streak.`
+              : "Log today's essentials to begin building your first streak."
+        }
+        compact
+        className="nox-contextual-tip"
+      />
 
       <DashboardHero
         rank={profile!.rank}

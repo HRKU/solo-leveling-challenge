@@ -3,6 +3,8 @@ import { Plus_Jakarta_Sans, Orbitron } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/NavBar";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { NoxPreferenceSync } from "@/components/NoxPreferenceSync";
 
 const bodyFont = Plus_Jakarta_Sans({
   variable: "--font-body",
@@ -44,11 +46,15 @@ export default function RootLayout({
     <html
       lang="en"
       className={`dark ${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <NavBar />
-        <main className="flex flex-1 flex-col pb-20 lg:pb-0">{children}</main>
-        <Toaster />
+        <ThemeProvider>
+          <NoxPreferenceSync />
+          <NavBar />
+          <main className="flex flex-1 flex-col pb-20 lg:pb-0">{children}</main>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

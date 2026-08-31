@@ -1,28 +1,26 @@
 'use client'
 
-import { useActionState } from 'react'
+import { Suspense, useActionState, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { signIn } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
-import { Swords } from 'lucide-react'
+import { NoxBrandMark } from '@/components/NoxBrandMark'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 
-export default function LoginPage() {
+function LoginForm() {
   const [state, action, pending] = useActionState(signIn, undefined)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const searchParams = useSearchParams()
+  const passwordReset = searchParams.get('reset') === 'success'
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-8 p-4">
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/30">
-          <Swords className="size-7 text-primary" strokeWidth={2} />
-        </div>
-        <div className="text-center">
-          <p className="font-heading text-lg font-bold tracking-[0.15em] text-foreground">SOLO LEVELING</p>
-          <p className="text-xs font-medium tracking-[0.3em] text-muted-foreground uppercase">Challenge</p>
-        </div>
-      </div>
+      <NoxBrandMark />
 
       <Card className="w-full max-w-sm">
         <CardHeader>
@@ -33,17 +31,54 @@ export default function LoginPage() {
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={pending}
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" autoComplete="current-password" required />
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={pending}
+                required
+              />
             </div>
-            {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
+            {passwordReset && (
+              <p className="flex items-center gap-2 text-sm text-emerald-400" role="status">
+                <NoxPixelMascot state="success" decorative className="-my-2 size-8 shrink-0" />
+                Password updated. Log in with your new password.
+              </p>
+            )}
+            {state?.error && <p className="text-sm text-destructive" role="alert">{state.error}</p>}
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" disabled={pending} className="w-full">
-              {pending ? 'Logging in...' : 'Log in'}
+              {pending ? (
+                <span className="flex items-center gap-2">
+                  <NoxPixelMascot state="loading" decorative className="-my-2 size-8" />
+                  Entering the gate...
+                </span>
+              ) : (
+                'Log in'
+              )}
             </Button>
             <p className="text-sm text-muted-foreground">
               New here?{' '}
@@ -55,5 +90,13 @@ export default function LoginPage() {
         </form>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-svh" />}>
+      <LoginForm />
+    </Suspense>
   )
 }

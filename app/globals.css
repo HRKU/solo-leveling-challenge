@@ -141,6 +141,204 @@
   font-feature-settings: "tnum";
 }
 
+.settings-section-nav {
+  scrollbar-width: none;
+}
+
+.settings-section-nav::-webkit-scrollbar {
+  display: none;
+}
+
+/* Nox — scalable pixel-vector companion states. */
+@keyframes nox-pixel-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes nox-pixel-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleX(0.82);
+    opacity: 0.42;
+  }
+}
+
+@keyframes nox-pixel-blink {
+  0%,
+  45%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+  46%,
+  47% {
+    transform: scaleY(0.18);
+  }
+}
+
+@keyframes nox-pixel-tail {
+  0%,
+  100% {
+    transform: translateX(0) skewX(0deg);
+  }
+  50% {
+    transform: translateX(4px) skewX(-3deg);
+  }
+}
+
+@keyframes nox-pixel-rune-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nox-pixel-core-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes nox-pixel-particle-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  35%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+.nox-pixel-mascot {
+  display: block;
+  overflow: visible;
+  image-rendering: pixelated;
+  isolation: isolate;
+}
+
+.nox-pixel-float {
+  transform-origin: center;
+  animation: nox-pixel-float 1.6s steps(2, end) infinite;
+}
+
+.nox-pixel-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nox-pixel-shadow 1.6s steps(2, end) infinite;
+}
+
+.nox-pixel-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nox-pixel-blink 4.2s steps(1, end) infinite;
+}
+
+.nox-pixel-tail {
+  transform-box: fill-box;
+  transform-origin: center top;
+  animation: nox-pixel-tail 1.2s steps(2, end) infinite;
+}
+
+.nox-pixel-loading-rune {
+  transform-box: view-box;
+  transform-origin: 128px 160px;
+  animation: nox-pixel-rune-spin 1s steps(8, end) infinite;
+}
+
+.nox-pixel-core,
+.nox-pixel-state-mark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nox-pixel-core-pulse 1.2s steps(2, end) infinite;
+}
+
+.nox-pixel-success {
+  filter: drop-shadow(0 0 8px rgb(74 222 128 / 70%));
+}
+
+.nox-pixel-error {
+  filter: drop-shadow(0 0 8px rgb(248 113 113 / 70%));
+}
+
+.nox-pixel-particle {
+  animation: nox-pixel-particle-rise 1.2s steps(4, end) infinite;
+}
+
+.nox-pixel-particle-two {
+  animation-delay: -400ms;
+}
+
+.nox-pixel-particle-three {
+  animation-delay: -800ms;
+}
+
+html[data-nox-visible="false"] .nox-avatar-slot,
+html[data-nox-visible="false"] .nox-pixel-mascot {
+  display: none !important;
+}
+
+html[data-nox-tips="false"] .nox-contextual-tip {
+  display: none;
+}
+
+html[data-nox-motion="reduced"] .nox-pixel-float {
+  animation-duration: 3.2s;
+  animation-timing-function: ease-in-out;
+}
+
+html[data-nox-motion="reduced"] .nox-pixel-loading-rune {
+  animation-duration: 1.8s;
+}
+
+html[data-nox-motion="reduced"] .nox-pixel-eyes,
+html[data-nox-motion="reduced"] .nox-pixel-tail,
+html[data-nox-motion="reduced"] .nox-pixel-particle {
+  animation: none;
+}
+
+html[data-nox-motion="off"] .nox-pixel-float,
+html[data-nox-motion="off"] .nox-pixel-shadow,
+html[data-nox-motion="off"] .nox-pixel-eyes,
+html[data-nox-motion="off"] .nox-pixel-tail,
+html[data-nox-motion="off"] .nox-pixel-loading-rune,
+html[data-nox-motion="off"] .nox-pixel-core,
+html[data-nox-motion="off"] .nox-pixel-state-mark,
+html[data-nox-motion="off"] .nox-pixel-particle {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nox-pixel-float,
+  .nox-pixel-shadow,
+  .nox-pixel-eyes,
+  .nox-pixel-tail,
+  .nox-pixel-loading-rune,
+  .nox-pixel-core,
+  .nox-pixel-state-mark,
+  .nox-pixel-particle {
+    animation: none;
+  }
+}
+
 /* Leaderboard champion (#1) — subtle gold enter + idle glow */
 @keyframes champion-enter {
   from {
@@ -253,9 +451,82 @@
   animation: logo-glow 2.8s ease-in-out infinite;
 }
 
+/* Post-auth System awakening — a brief branded bridge into the dashboard. */
+@keyframes awakening-enter {
+  from { opacity: 0; transform: scale(0.84); filter: blur(8px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+@keyframes awakening-pulse {
+  0%, 100% { transform: scale(0.96); opacity: 0.7; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes awakening-orbit {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes awakening-progress {
+  from { transform: translateX(-105%); }
+  to { transform: translateX(105%); }
+}
+
+.awakening-screen {
+  background:
+    radial-gradient(circle at 50% 44%, color-mix(in oklch, var(--primary) 24%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 50%, oklch(0.19 0.055 276), var(--background) 64%);
+}
+
+.awakening-logo-shell {
+  position: relative;
+  border-radius: 2rem;
+  animation: awakening-pulse 1.7s ease-in-out infinite;
+  box-shadow: 0 0 70px color-mix(in oklch, var(--primary) 38%, transparent);
+}
+
+.awakening-logo,
+.awakening-title,
+.awakening-subtitle,
+.awakening-progress {
+  animation: awakening-enter 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.awakening-title { animation-delay: 140ms; }
+.awakening-subtitle { animation-delay: 240ms; }
+.awakening-progress { animation-delay: 320ms; }
+
+.awakening-orbit {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: min(72vw, 32rem);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in oklch, var(--primary) 22%, transparent);
+  border-right-color: color-mix(in oklch, var(--primary) 72%, transparent);
+  border-radius: 9999px;
+  animation: awakening-orbit 7s linear infinite;
+}
+
+.awakening-progress-bar {
+  width: 58%;
+  box-shadow: 0 0 12px color-mix(in oklch, var(--primary) 90%, transparent);
+  animation: awakening-progress 1.15s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .logo-glow {
     animation: none;
     filter: drop-shadow(0 0 4px color-mix(in oklch, var(--primary) 80%, transparent));
+  }
+
+  .awakening-logo-shell,
+  .awakening-logo,
+  .awakening-title,
+  .awakening-subtitle,
+  .awakening-progress,
+  .awakening-orbit,
+  .awakening-progress-bar {
+    animation: none;
   }
 }

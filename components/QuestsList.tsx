@@ -1,9 +1,11 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useActionState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { createChallenge } from '@/app/actions/challenges'
 import { ChallengeCard } from '@/components/ChallengeCard'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
+import { NoxStatusCard } from '@/components/NoxStatusCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,9 +25,13 @@ export function QuestsList({
   currentUserId: string
 }) {
   const [state, action, pending] = useActionState(createChallenge, undefined)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
-    if (state?.success) toast.success('Quest posted to the group.')
+    if (state?.success) {
+      toast.success('Quest posted to the group.')
+      formRef.current?.reset()
+    }
     if (state?.error) toast.error(state.error)
   }, [state])
 
@@ -36,7 +42,7 @@ export function QuestsList({
           <CardTitle className="font-heading">Post a quest</CardTitle>
           <CardDescription>Free text, group-wide, runs through the end of this month.</CardDescription>
         </CardHeader>
-        <form action={action} key={state?.success ? Date.now() : 'form'}>
+        <form ref={formRef} action={action}>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="title">Title</Label>
@@ -53,7 +59,14 @@ export function QuestsList({
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={pending} className="w-full" size="lg">
-              {pending ? 'Posting...' : 'Post quest'}
+              {pending ? (
+                <span className="flex items-center gap-2">
+                  <NoxPixelMascot state="loading" decorative className="-my-2 size-8" />
+                  Posting quest...
+                </span>
+              ) : (
+                'Post quest'
+              )}
             </Button>
           </CardFooter>
         </form>
@@ -61,7 +74,13 @@ export function QuestsList({
 
       <div className="flex flex-col gap-3">
         {challenges.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground">No quests posted yet this month.</p>
+          <NoxStatusCard
+            state="idle"
+            eyebrow="NOX // QUEST BOARD"
+            title="No quests posted yet"
+            description="Create the first group challenge for this month and set its bonus XP."
+            compact
+          />
         )}
         {challenges.map((challenge) => (
           <ChallengeCard

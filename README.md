@@ -120,6 +120,7 @@ In the Supabase dashboard, go to **Settings → API** and copy the **Project URL
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 GROUP_INVITE_CODE=choose-a-long-random-group-code
 ```
@@ -139,6 +140,19 @@ This dashboard setting is required in production. Without it, someone could
 bypass the app's invite form and call Supabase Auth's public signup endpoint
 directly. Local Supabase has the equivalent setting disabled in
 `supabase/config.toml`.
+
+### Password reset URLs
+
+Password recovery uses Supabase's email flow. In **Authentication → URL
+Configuration**:
+
+- set **Site URL** to the production app URL;
+- add `https://your-production-domain/auth/callback` as an allowed redirect;
+- add `http://localhost:3000/auth/callback` when testing locally.
+
+Set `NEXT_PUBLIC_SITE_URL` to the same production origin in Vercel. Supabase's
+default mail service is suitable for light testing but is rate-limited; use
+custom SMTP if password resets become a regular production workflow.
 
 ### 6. Run it
 

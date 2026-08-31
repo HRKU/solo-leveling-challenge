@@ -1,16 +1,24 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { completeOnboarding } from '@/app/actions/onboarding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 import { Ruler, Scale, Target, Flag } from 'lucide-react'
 
 export function OnboardingForm() {
   const [state, action, pending] = useActionState(completeOnboarding, undefined)
+  const [name, setName] = useState('')
+  const [age, setAge] = useState('')
+  const [sex, setSex] = useState('other')
+  const [heightCm, setHeightCm] = useState('')
+  const [startingWeightKg, setStartingWeightKg] = useState('')
+  const [goalType, setGoalType] = useState('maintain')
+  const [targetWeightKg, setTargetWeightKg] = useState('')
 
   return (
     <Card className="w-full max-w-md">
@@ -24,17 +32,35 @@ export function OnboardingForm() {
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Name</Label>
-            <Input id="name" name="name" placeholder="Your name" required />
+            <Input
+              id="name"
+              name="name"
+              placeholder="Your name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              disabled={pending}
+              required
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="age">Age</Label>
-              <Input id="age" name="age" type="number" min={1} max={129} required />
+              <Input
+                id="age"
+                name="age"
+                type="number"
+                min={1}
+                max={129}
+                value={age}
+                onChange={(event) => setAge(event.target.value)}
+                disabled={pending}
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="sex">Sex</Label>
-              <Select name="sex" defaultValue="other">
+              <Select name="sex" value={sex} onValueChange={(value) => setSex(value ?? 'other')} disabled={pending}>
                 <SelectTrigger id="sex" className="w-full">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -53,14 +79,36 @@ export function OnboardingForm() {
                 <Ruler className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
                 Height (cm)
               </Label>
-              <Input id="heightCm" name="heightCm" type="number" inputMode="decimal" min={1} step="0.1" required />
+              <Input
+                id="heightCm"
+                name="heightCm"
+                type="number"
+                inputMode="decimal"
+                min={1}
+                step="0.1"
+                value={heightCm}
+                onChange={(event) => setHeightCm(event.target.value)}
+                disabled={pending}
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="startingWeightKg" className="flex items-center gap-1.5">
                 <Scale className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
                 Current weight (kg)
               </Label>
-              <Input id="startingWeightKg" name="startingWeightKg" type="number" inputMode="decimal" min={1} step="0.1" required />
+              <Input
+                id="startingWeightKg"
+                name="startingWeightKg"
+                type="number"
+                inputMode="decimal"
+                min={1}
+                step="0.1"
+                value={startingWeightKg}
+                onChange={(event) => setStartingWeightKg(event.target.value)}
+                disabled={pending}
+                required
+              />
             </div>
           </div>
 
@@ -69,7 +117,7 @@ export function OnboardingForm() {
               <Target className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
               Goal
             </Label>
-            <Select name="goalType" defaultValue="maintain">
+            <Select name="goalType" value={goalType} onValueChange={(value) => setGoalType(value ?? 'maintain')} disabled={pending}>
               <SelectTrigger id="goalType" className="w-full">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
@@ -86,14 +134,31 @@ export function OnboardingForm() {
               <Flag className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
               Target weight (kg) — optional
             </Label>
-            <Input id="targetWeightKg" name="targetWeightKg" type="number" inputMode="decimal" min={1} step="0.1" />
+            <Input
+              id="targetWeightKg"
+              name="targetWeightKg"
+              type="number"
+              inputMode="decimal"
+              min={1}
+              step="0.1"
+              value={targetWeightKg}
+              onChange={(event) => setTargetWeightKg(event.target.value)}
+              disabled={pending}
+            />
           </div>
 
-          {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
+          {state?.error && <p className="text-sm text-destructive" role="alert">{state.error}</p>}
         </CardContent>
         <CardFooter>
           <Button type="submit" disabled={pending} className="w-full" size="lg">
-            {pending ? 'Saving...' : 'Start the challenge'}
+            {pending ? (
+              <span className="flex items-center gap-2">
+                <NoxPixelMascot state="loading" decorative className="-my-2 size-8" />
+                Calibrating your stats...
+              </span>
+            ) : (
+              'Start the challenge'
+            )}
           </Button>
         </CardFooter>
       </form>

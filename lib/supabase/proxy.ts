@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/signup']
+const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/auth/callback']
+const AUTH_FLOW_ROUTES = ['/update-password']
 const ONBOARDING_ROUTE = '/onboarding'
 
 export async function updateSession(request: NextRequest) {
@@ -33,6 +34,7 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isPublicRoute = PUBLIC_ROUTES.some((route) => path.startsWith(route))
+  const isAuthFlowRoute = AUTH_FLOW_ROUTES.some((route) => path.startsWith(route))
   const isOnboardingRoute = path.startsWith(ONBOARDING_ROUTE)
 
   if (!user && !isPublicRoute) {
@@ -41,13 +43,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && isPublicRoute) {
+  if (user && isPublicRoute && !path.startsWith('/auth/callback')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
-  if (user && !isOnboardingRoute && !isPublicRoute) {
+  if (user && !isOnboardingRoute && !isPublicRoute && !isAuthFlowRoute) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarded')

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Ruler, Target, Flag } from 'lucide-react'
 import type { Profile } from '@/lib/types'
+import { NoxPixelMascot } from '@/components/NoxPixelMascot'
 
 export function ProfileEditForm({ profile }: { profile: Profile }) {
   const [state, action, pending] = useActionState(updateProfile, undefined)
@@ -20,7 +21,7 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
   }, [state])
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="font-heading text-xl">Edit your Hunter profile</CardTitle>
         <CardDescription>Changes apply to your personalized daily targets immediately.</CardDescription>
@@ -108,7 +109,14 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
         </CardContent>
         <CardFooter>
           <Button type="submit" disabled={pending} className="w-full" size="lg">
-            {pending ? 'Saving...' : 'Save changes'}
+            {pending ? (
+              <span className="flex items-center gap-2">
+                <NoxPixelMascot state="loading" decorative className="-my-2 size-8" />
+                Updating profile...
+              </span>
+            ) : (
+              'Save changes'
+            )}
           </Button>
         </CardFooter>
       </form>
