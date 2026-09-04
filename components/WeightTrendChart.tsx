@@ -129,7 +129,7 @@ export function WeightTrendChart({
     <section className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="font-heading text-sm font-semibold tracking-wide text-muted-foreground">
+          <h2 className="font-heading text-base font-semibold tracking-wide text-foreground">
             Weight trend
           </h2>
           {delta != null && (

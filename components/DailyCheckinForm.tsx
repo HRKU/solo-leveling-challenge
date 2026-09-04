@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useActionState, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { upsertDailyCheckin } from '@/app/actions/daily-checkins'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ export function DailyCheckinForm({
   checkin: DailyCheckin | null
   targets: DailyTargets
 }) {
-  const [state, action, pending] = useActionState(upsertDailyCheckin, undefined)
+  const [showCelebration, setShowCelebration] = useState(false)
   const [entries, setEntries] = useState<WorkoutEntry[]>(() => hydrateWorkoutEntries(checkin))
   const [essentials, setEssentials] = useState<DailyEssentialsValues>(() => ({
     waterMl: checkin?.water_ml ?? null,
@@ -38,19 +38,31 @@ export function DailyCheckinForm({
 
   const workoutJson = useMemo(() => JSON.stringify(entries), [entries])
 
-  useEffect(() => {
-    if (state?.error) {
-      toast.error(state.error)
-      return
+  async function submitCheckin(previousState: Parameters<typeof upsertDailyCheckin>[0], formData: FormData) {
+    const nextState = await upsertDailyCheckin(previousState, formData)
+    if (nextState.error) {
+      toast.error(nextState.error)
+      return nextState
     }
-    if (!state?.success) return
+    if (!nextState.success) return nextState
 
-    if (state.created) {
-      toast.success(isToday ? "Today's check-in saved." : `Check-in for ${date} saved.`)
-    } else {
-      toast.success(isToday ? "Today's check-in updated." : `Check-in for ${date} updated.`)
-    }
-  }, [state, date, isToday])
+    const description = nextState.hasWorkout
+      ? nextState.created
+        ? `${nextState.scoreXp ?? 0} XP secured from this check-in.`
+        : 'Your workout and XP have been recalculated.'
+      : 'Your daily progress is now up to date.'
+    toast.success(
+      nextState.created
+        ? isToday ? "Today's check-in saved." : `Check-in for ${date} saved.`
+        : isToday ? "Today's check-in updated." : `Check-in for ${date} updated.`,
+      { description, duration: 4_000 }
+    )
+    setShowCelebration(true)
+    window.setTimeout(() => setShowCelebration(false), 2_400)
+    return nextState
+  }
+
+  const [state, action, pending] = useActionState(submitCheckin, undefined)
 
   const titleVerb = checkin ? 'Edit' : 'Log'
   const titleWhen = isToday ? "today's" : formatCheckinDateHeading(date)
@@ -85,7 +97,37 @@ export function DailyCheckinForm({
   }
 
   return (
-    <Card>
+    <>
+      {showCelebration && state?.success ? (
+        <button
+          type="button"
+          onClick={() => setShowCelebration(false)}
+          className="fixed inset-0 z-50 flex w-full flex-col items-center justify-center overflow-hidden bg-background/96 p-6 text-center backdrop-blur-xl motion-safe:animate-in motion-safe:fade-in sm:inset-x-4 sm:top-1/2 sm:bottom-auto sm:mx-auto sm:w-[min(24rem,calc(100%-2rem))] sm:-translate-y-1/2 sm:flex-row sm:justify-start sm:gap-4 sm:rounded-2xl sm:border sm:border-primary/30 sm:bg-popover/95 sm:p-5 sm:text-left sm:shadow-2xl sm:shadow-primary/20 sm:motion-safe:zoom-in-95"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="pointer-events-none absolute size-64 rounded-full bg-primary/15 blur-3xl sm:hidden" />
+          <span className="pointer-events-none absolute size-36 rounded-full border border-primary/20 motion-safe:animate-ping sm:hidden" />
+          <NoxPixelMascot state="success" decorative className="relative size-28 shrink-0 drop-shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_65%,transparent)] sm:size-16" />
+          <span className="relative mt-6 sm:mt-0">
+            <span className="block font-heading text-xl font-bold tracking-wide text-foreground sm:text-base sm:font-semibold">
+              {state.hasWorkout ? 'Workout secured, Hunter!' : 'Check-in secured!'}
+            </span>
+            <span className="mx-auto mt-2 block max-w-xs text-sm leading-relaxed text-muted-foreground sm:mx-0 sm:mt-1">
+              {state.hasWorkout && state.created
+                ? `${state.scoreXp ?? 0} XP added to your progress.`
+                : state.hasWorkout
+                  ? 'Your workout and XP are up to date.'
+                  : 'Your daily progress is up to date.'}
+            </span>
+            <span className="mt-4 block text-xs font-medium tracking-wide text-primary sm:mt-2 sm:font-normal sm:tracking-normal">Tap anywhere to continue</span>
+          </span>
+          <span className="absolute inset-x-0 bottom-0 h-1 bg-primary/20 sm:hidden">
+            <span className="block h-full origin-left bg-primary motion-safe:animate-[checkin-success-timer_2.4s_linear_forwards]" />
+          </span>
+        </button>
+      ) : null}
+      <Card>
       <CardHeader>
         <CardTitle className="font-heading">
           {titleVerb} {titleWhen} check-in
@@ -133,6 +175,7 @@ export function DailyCheckinForm({
           </Button>
         </CardFooter>
       </form>
-    </Card>
+      </Card>
+    </>
   )
 }

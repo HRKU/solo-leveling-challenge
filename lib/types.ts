@@ -85,6 +85,38 @@ export interface WeeklyCheckin {
   updated_at: string
 }
 
+export interface AiReportPreference {
+  user_id: string
+  weekly_enabled: boolean
+  consented_at: string | null
+  updated_at: string
+}
+
+export interface WeeklyReportContent {
+  verdict: string
+  strongestProgress: string
+  watchPoint: string
+  exerciseInsight: string
+  bodyGoalInsight: string
+  missions: [string, string, string]
+  noxClosing: string
+}
+
+export interface AiWeeklyReport {
+  id: string
+  user_id: string
+  week_start_date: string
+  status: 'pending' | 'ready' | 'failed'
+  report: WeeklyReportContent | null
+  source_payload?: import('@/lib/weekly-report/types').WeeklyReportPayload | null
+  model: string | null
+  prompt_version?: string
+  input_tokens?: number | null
+  output_tokens?: number | null
+  generation_started_at: string
+  generated_at: string | null
+}
+
 export interface Challenge {
   id: string
   creator_id: string

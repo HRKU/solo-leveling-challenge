@@ -1,12 +1,32 @@
+import { Suspense } from 'react'
 import { createClient, getCurrentUserId } from '@/lib/supabase/server'
 import { calculateDailyTargets } from '@/lib/targets'
 import { DashboardHero } from '@/components/DashboardHero'
 import { DailyCheckinForm } from '@/components/DailyCheckinForm'
 import { BackfillDatePicker } from '@/components/BackfillDatePicker'
 import { NoxStatusCard } from '@/components/NoxStatusCard'
+import { WeeklyHunterReport } from '@/components/WeeklyHunterReport'
+import { getWeeklyReportViewState } from '@/lib/weekly-report/data'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
 import type { Profile, DailyCheckin } from '@/lib/types'
+
+async function WeeklyReportSection({ userId }: { userId: string }) {
+  const weeklyReportState = await getWeeklyReportViewState(userId)
+  return <WeeklyHunterReport initialState={weeklyReportState} />
+}
+
+function WeeklyReportFallback() {
+  return (
+    <NoxStatusCard
+      state="loading"
+      eyebrow="NOX // WEEKLY INTELLIGENCE"
+      title="Preparing the weekly briefing"
+      description="Your dashboard is ready while Nox gathers the completed week in the background."
+      compact
+    />
+  )
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -69,6 +89,10 @@ export default async function DashboardPage() {
         totalXp={profile!.total_xp}
         currentStreak={profile!.current_streak}
       />
+
+      <Suspense fallback={<WeeklyReportFallback />}>
+        <WeeklyReportSection userId={userId!} />
+      </Suspense>
 
       <DailyCheckinForm
         key={todayCheckin?.id ?? 'new'}
