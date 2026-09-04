@@ -67,5 +67,17 @@ export async function completeOnboarding(
     return { error: error.message }
   }
 
+  const { error: metadataError } = await admin.auth.admin.updateUserById(user.id, {
+    app_metadata: { ...user.app_metadata, onboarded: true },
+  })
+  if (metadataError) {
+    return { error: 'Profile saved, but session setup did not finish. Please submit once more.' }
+  }
+
+  const { error: refreshError } = await supabase.auth.refreshSession()
+  if (refreshError) {
+    return { error: 'Profile saved. Please submit once more to refresh your session.' }
+  }
+
   redirect('/awakening')
 }

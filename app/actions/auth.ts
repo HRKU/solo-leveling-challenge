@@ -59,6 +59,7 @@ export async function signUp(_prevState: AuthFormState | undefined, formData: Fo
     password,
     email_confirm: true,
     user_metadata: { display_name: displayName },
+    app_metadata: { onboarded: false },
   })
 
   if (createError || !created.user) {

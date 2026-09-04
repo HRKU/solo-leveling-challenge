@@ -5,6 +5,7 @@ How the app is meant to work for the friend group. Pair with [`SCORING.md`](SCOR
 ## Dashboard
 
 - `/` opens with `DashboardHero` — a rank-tinted hero card (`RANK_HERO_BG`/`RANK_BAR_GRADIENT` in `RankBadge.tsx`) replacing a flat card: rank medallion + streak, then a single XP progress bar (the shared `Progress` primitive previously always rendered a default track *and* any custom children, doubling the bar — fixed in `components/ui/progress.tsx`) tinted to the hunter's current rank, with an "X XP to Level N+1" caption underneath.
+- **Weekly Hunter Report** — opt-in, private Nox analysis shown after the rank hero for eligible completed weeks. Eligibility, payload, safety, and implementation rules live in [`AI_WEEKLY_REPORT_PLAN.md`](AI_WEEKLY_REPORT_PLAN.md).
 
 ## Daily check-in
 

@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
-import { Bell, Bot, Info, Palette, ShieldCheck, UserRound } from 'lucide-react'
+import { Bell, Bot, BrainCircuit, Info, Palette, ShieldCheck, UserRound } from 'lucide-react'
 import { AppearancePreferences } from '@/components/settings/AppearancePreferences'
 import { NoxPreferences } from '@/components/settings/NoxPreferences'
 import { SecuritySettings } from '@/components/settings/SecuritySettings'
+import { WeeklyReportSettings } from '@/components/settings/WeeklyReportSettings'
 import { ProfileEditForm } from '@/components/ProfileEditForm'
 import { ReminderSettings } from '@/components/ReminderSettings'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +16,7 @@ const SETTINGS_LINKS = [
   { href: '#companion', label: 'Nox companion', icon: Bot },
   { href: '#appearance', label: 'Appearance', icon: Palette },
   { href: '#notifications', label: 'Notifications', icon: Bell },
+  { href: '#ai-coaching', label: 'AI coaching', icon: BrainCircuit },
   { href: '#security', label: 'Account & security', icon: ShieldCheck },
   { href: '#application', label: 'Application', icon: Info },
 ]
@@ -45,9 +47,10 @@ export default async function SettingsPage() {
   const supabase = await createClient()
   const userId = await getCurrentUserId()
 
-  const [{ data: profile }, { data: authData }] = await Promise.all([
+  const [{ data: profile }, { data: authData }, { data: reportPreference }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId!).single<Profile>(),
     supabase.auth.getUser(),
+    supabase.from('ai_report_preferences').select('weekly_enabled').eq('user_id', userId!).maybeSingle(),
   ])
 
   if (!profile || !authData.user?.email) {
@@ -119,6 +122,14 @@ export default async function SettingsPage() {
             description="Control reminder permissions for this browser or installed application."
           >
             <ReminderSettings />
+          </SettingsSection>
+
+          <SettingsSection
+            id="ai-coaching"
+            title="AI coaching"
+            description="Control private, personalized reports generated from your completed activity weeks."
+          >
+            <WeeklyReportSettings initialEnabled={reportPreference?.weekly_enabled ?? false} />
           </SettingsSection>
 
           <SettingsSection

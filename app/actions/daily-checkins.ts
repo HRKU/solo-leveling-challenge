@@ -20,6 +20,8 @@ export interface CheckinFormState {
   success?: boolean
   /** True when this upsert created a new row vs updated an existing one. */
   created?: boolean
+  hasWorkout?: boolean
+  scoreXp?: number
 }
 
 function todayUtc(): string {
@@ -191,5 +193,7 @@ export async function upsertDailyCheckin(
   return {
     success: true,
     created,
+    hasWorkout: workoutDone,
+    scoreXp,
   }
 }

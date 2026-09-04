@@ -1,7 +1,5 @@
 import { PageLoadingState } from '@/components/PageLoadingState'
 
 export default function Loading() {
-  return (
-    <PageLoadingState />
-  )
+  return <PageLoadingState title="Mapping your activity" />
 }

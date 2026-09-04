@@ -2,8 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/auth/callback']
-const AUTH_FLOW_ROUTES = ['/update-password']
-const ONBOARDING_ROUTE = '/onboarding'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -27,68 +25,44 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: do not remove — refreshes the auth token if expired.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Verify the cookie-backed access token. With asymmetric signing keys this
+  // uses cached public keys instead of putting the Auth server on every route's
+  // critical path; the SSR client still propagates refreshed cookies.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = typeof claimsData?.claims.sub === 'string' ? claimsData.claims.sub : null
+  const appMetadata = claimsData?.claims.app_metadata
+  const onboarded = appMetadata && typeof appMetadata === 'object' && 'onboarded' in appMetadata
+    ? (appMetadata as { onboarded?: unknown }).onboarded
+    : null
 
   const path = request.nextUrl.pathname
   const isPublicRoute = PUBLIC_ROUTES.some((route) => path.startsWith(route))
-  const isAuthFlowRoute = AUTH_FLOW_ROUTES.some((route) => path.startsWith(route))
-  const isOnboardingRoute = path.startsWith(ONBOARDING_ROUTE)
 
-  if (!user && !isPublicRoute) {
+  if (!userId && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && isPublicRoute && !path.startsWith('/auth/callback')) {
+  if (userId && isPublicRoute && !path.startsWith('/auth/callback')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
-  if (user && !isOnboardingRoute && !isPublicRoute && !isAuthFlowRoute) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarded')
-      .eq('id', user.id)
-      .single()
-
-    if (profile && !profile.onboarded) {
-      const url = request.nextUrl.clone()
-      url.pathname = ONBOARDING_ROUTE
-      return NextResponse.redirect(url)
-    }
-  }
-
-  if (user && isOnboardingRoute) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarded')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.onboarded) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/'
-      return NextResponse.redirect(url)
-    }
-  }
-
   // Pass the already-verified user id down to Server Components via a
   // *request* header (not a response header — those aren't visible to the
   // render pipeline, only to the browser), so pages can read it directly
-  // instead of calling supabase.auth.getUser() a second time. That call
-  // always makes a fresh network round-trip to the Auth server, and doing
-  // it twice per navigation (once here, once per page) was a real chunk of
-  // the ~1s+ this proxy was adding to every route change. RLS on the actual
+  // instead of repeating identity resolution in every page. RLS on the actual
   // data queries is unaffected either way — auth.uid() is independently
   // verified by PostgREST from the request's cookies regardless of this
   // header's value.
-  if (user) {
-    request.headers.set('x-user-id', user.id)
+  if (userId) {
+    request.headers.set('x-user-id', userId)
+    request.headers.delete('x-user-onboarded')
+    if (typeof onboarded === 'boolean') {
+      request.headers.set('x-user-onboarded', String(onboarded))
+    }
     const responseWithUserHeader = NextResponse.next({ request })
     // Preserve any refreshed session cookies Supabase already queued onto
     // supabaseResponse via the setAll callback above.

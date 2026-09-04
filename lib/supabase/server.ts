@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies, headers } from 'next/headers'
 
 /**
- * The user id, already verified by proxy.ts's supabase.auth.getUser() call
+ * The user id, already verified by proxy.ts's supabase.auth.getClaims() call
  * and forwarded via the x-user-id request header. Reading it here avoids a
  * second network round-trip to the Auth server on every page — RLS still
  * independently verifies auth.uid() on every actual data query regardless,
@@ -13,6 +13,11 @@ import { cookies, headers } from 'next/headers'
 export async function getCurrentUserId(): Promise<string | null> {
   const h = await headers()
   return h.get('x-user-id')
+}
+
+export async function getCurrentOnboardedClaim(): Promise<boolean | null> {
+  const value = (await headers()).get('x-user-onboarded')
+  return value === 'true' ? true : value === 'false' ? false : null
 }
 
 export async function createClient() {
