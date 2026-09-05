@@ -22,6 +22,8 @@ export interface CheckinFormState {
   created?: boolean
   hasWorkout?: boolean
   scoreXp?: number
+  personalQuestsCompleted?: number
+  personalQuestXp?: number
 }
 
 function todayUtc(): string {
@@ -139,6 +141,7 @@ export async function upsertDailyCheckin(
     scoreBreakdown = buildScoreBreakdown(workoutScore, habitXp)
   }
 
+  const questCompletionWindowStart = new Date().toISOString()
   const { error: upsertError } = await admin.from('daily_checkins').upsert(
     {
       user_id: user.id,
@@ -185,15 +188,27 @@ export async function upsertDailyCheckin(
     return { error: profileError.message }
   }
 
+  const { data: completedPersonalQuests } = await admin
+    .from('personal_quests')
+    .select('xp_reward')
+    .eq('user_id', user.id)
+    .gte('completed_at', questCompletionWindowStart)
+    .returns<{ xp_reward: number }[]>()
+  const personalQuestsCompleted = completedPersonalQuests?.length ?? 0
+  const personalQuestXp = (completedPersonalQuests ?? []).reduce((sum, quest) => sum + quest.xp_reward, 0)
+
   revalidatePath('/')
   revalidatePath('/leaderboard')
   revalidatePath('/calendar')
   revalidatePath(`/checkin/${date}`)
+  revalidatePath('/quests')
 
   return {
     success: true,
     created,
     hasWorkout: workoutDone,
     scoreXp,
+    personalQuestsCompleted,
+    personalQuestXp,
   }
 }

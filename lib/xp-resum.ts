@@ -10,7 +10,7 @@ import { levelForTotalXp, rankForLevel } from '@/lib/xp'
  * own incremental update path.
  */
 export async function resumTotalXp(supabase: SupabaseClient, userId: string) {
-  const [{ data: checkins }, { data: completions }] = await Promise.all([
+  const [{ data: checkins }, { data: completions }, { data: personalQuests }] = await Promise.all([
     supabase.from('daily_checkins').select('score_xp').eq('user_id', userId),
     supabase
       .from('challenge_completions')
@@ -18,6 +18,13 @@ export async function resumTotalXp(supabase: SupabaseClient, userId: string) {
       .eq('user_id', userId)
       .eq('completed', true)
       .returns<{ challenges: { xp_reward: number } | null }[]>(),
+    supabase
+      .from('personal_quests')
+      .select('xp_reward')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .not('xp_awarded_at', 'is', null)
+      .returns<{ xp_reward: number }[]>(),
   ])
 
   const checkinXp = (checkins ?? []).reduce((sum, c) => sum + c.score_xp, 0)
@@ -25,8 +32,9 @@ export async function resumTotalXp(supabase: SupabaseClient, userId: string) {
     (sum, c) => sum + (c.challenges?.xp_reward ?? 0),
     0
   )
+  const personalQuestXp = (personalQuests ?? []).reduce((sum, quest) => sum + quest.xp_reward, 0)
 
-  const totalXp = checkinXp + challengeXp
+  const totalXp = checkinXp + challengeXp + personalQuestXp
   const level = levelForTotalXp(totalXp)
   const rank = rankForLevel(level)
 

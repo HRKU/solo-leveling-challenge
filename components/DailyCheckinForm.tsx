@@ -46,7 +46,9 @@ export function DailyCheckinForm({
     }
     if (!nextState.success) return nextState
 
-    const description = nextState.hasWorkout
+    const description = nextState.personalQuestsCompleted
+      ? `${nextState.personalQuestsCompleted} personal quest${nextState.personalQuestsCompleted === 1 ? '' : 's'} completed · ${nextState.personalQuestXp ?? 0} bonus XP secured.`
+      : nextState.hasWorkout
       ? nextState.created
         ? `${nextState.scoreXp ?? 0} XP secured from this check-in.`
         : 'Your workout and XP have been recalculated.'
@@ -111,10 +113,14 @@ export function DailyCheckinForm({
           <NoxPixelMascot state="success" decorative className="relative size-28 shrink-0 drop-shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_65%,transparent)] sm:size-16" />
           <span className="relative mt-6 sm:mt-0">
             <span className="block font-heading text-xl font-bold tracking-wide text-foreground sm:text-base sm:font-semibold">
-              {state.hasWorkout ? 'Workout secured, Hunter!' : 'Check-in secured!'}
+              {state.personalQuestsCompleted
+                ? state.personalQuestsCompleted === 1 ? 'Personal quest complete!' : 'Personal quests complete!'
+                : state.hasWorkout ? 'Workout secured, Hunter!' : 'Check-in secured!'}
             </span>
             <span className="mx-auto mt-2 block max-w-xs text-sm leading-relaxed text-muted-foreground sm:mx-0 sm:mt-1">
-              {state.hasWorkout && state.created
+              {state.personalQuestsCompleted
+                ? `${state.personalQuestsCompleted} quest${state.personalQuestsCompleted === 1 ? '' : 's'} cleared · ${state.personalQuestXp ?? 0} bonus XP secured.`
+                : state.hasWorkout && state.created
                 ? `${state.scoreXp ?? 0} XP added to your progress.`
                 : state.hasWorkout
                   ? 'Your workout and XP are up to date.'

@@ -105,6 +105,7 @@ function aggregateExercises(rows: ReportDailyCheckin[]): ExerciseReportMetric[] 
       const exercise = getExerciseById(entry.exerciseId)
       if (!exercise || !completedEntry(entry)) continue
       const metric = metrics.get(entry.exerciseId) ?? {
+        exerciseId: entry.exerciseId,
         exercise: exercise.name,
         mode: exercise.loggingMode,
         sessions: 0,

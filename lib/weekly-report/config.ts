@@ -1,1 +1,1 @@
-export const REPORT_PROMPT_VERSION = 'weekly-v3' as const
+export const REPORT_PROMPT_VERSION = 'weekly-v5' as const
