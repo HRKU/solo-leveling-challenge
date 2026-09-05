@@ -32,6 +32,7 @@ export interface ReportProfile {
 }
 
 export interface ExerciseReportMetric {
+  exerciseId: string
   exercise: string
   mode: string
   sessions: number

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { WeeklyReportContent } from '@/lib/types'
 import type { WeeklyReportPayload } from '@/lib/weekly-report/types'
 import { REPORT_PROMPT_VERSION } from '@/lib/weekly-report/config'
+import { selectQuestCandidates, type PersonalQuestCandidate } from '@/lib/personal-quests/selection'
 
 export { REPORT_PROMPT_VERSION }
 
@@ -15,7 +16,7 @@ const reportSchema = z.object({
   watchPoint: z.string().min(1).max(420),
   exerciseInsight: z.string().min(1).max(420),
   bodyGoalInsight: z.string().min(1).max(420),
-  missions: z.tuple([
+  selectedQuestIds: z.tuple([
     z.string().min(1).max(180),
     z.string().min(1).max(180),
     z.string().min(1).max(180),
@@ -32,7 +33,7 @@ const jsonSchema = {
     watchPoint: { type: 'string' },
     exerciseInsight: { type: 'string' },
     bodyGoalInsight: { type: 'string' },
-    missions: {
+    selectedQuestIds: {
       type: 'array',
       minItems: 3,
       maxItems: 3,
@@ -42,7 +43,7 @@ const jsonSchema = {
   },
   required: [
     'verdict', 'strongestProgress', 'watchPoint', 'exerciseInsight',
-    'bodyGoalInsight', 'missions', 'noxClosing',
+    'bodyGoalInsight', 'selectedQuestIds', 'noxClosing',
   ],
 } as const
 
@@ -53,6 +54,7 @@ interface GroqResponse {
 
 export interface GeneratedReport {
   content: WeeklyReportContent
+  quests: PersonalQuestCandidate[]
   model: string
   inputTokens: number | null
   outputTokens: number | null
@@ -64,12 +66,20 @@ const SYSTEM_PROMPT = `You are Nox, a concise shadow-hunter fitness companion. R
 - State coverage when describing an average, such as "across 3 logged days".
 - Use exact exercise names from exerciseSummary.
 - Compare only with the personal baseline. When hasPersonalBaseline is false, call the item a "weekly win", say the baseline is still forming, and make no improvement claim.
-- Every mission must be directly supported by a supplied metric, missing-data flag, or the user's goal. Never invent a workout type or prescribe unsupported training.
+- Choose exactly three IDs from questCandidates. Prefer the candidates most relevant to the supplied evidence while keeping the set varied. Never invent an ID.
 - Prefer "met the logged target" over "100% adherence".
-- Provide exactly three small, specific missions.
+- Select at least one consistency or workout candidate, no more than two exercise candidates, no duplicate quest type, and no two candidates for the same exercise.
 - Do not diagnose, prescribe treatment, claim safe lifting capacity, use population standards, or invent values.`
 
-export async function generateWithGroq(payload: WeeklyReportPayload): Promise<GeneratedReport> {
+function missionTuple(quests: PersonalQuestCandidate[]): [string, string, string] {
+  if (quests.length !== 3) throw new Error('REPORT_REQUIRES_THREE_QUESTS')
+  return [quests[0].description, quests[1].description, quests[2].description]
+}
+
+export async function generateWithGroq(
+  payload: WeeklyReportPayload,
+  candidates: PersonalQuestCandidate[]
+): Promise<GeneratedReport> {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) throw new Error('GROQ_API_KEY_MISSING')
 
@@ -94,7 +104,13 @@ export async function generateWithGroq(payload: WeeklyReportPayload): Promise<Ge
           max_completion_tokens: 1_000,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: JSON.stringify(payload) },
+            {
+              role: 'user',
+              content: JSON.stringify({
+                evidence: payload,
+                questCandidates: candidates.map(({ candidateId, questType, title, description, target, focus, evidence, score }) => ({ candidateId, questType, title, description, target, focus, evidence, deterministicScore: score })),
+              }),
+            },
           ],
           response_format: {
             type: 'json_schema',
@@ -127,7 +143,19 @@ export async function generateWithGroq(payload: WeeklyReportPayload): Promise<Ge
         lastFailure = 'GROQ_INVALID_REPORT'
         continue
       }
-      const wordCount = Object.values(parsed.data)
+      const quests = selectQuestCandidates(candidates, parsed.data.selectedQuestIds)
+      if (quests.length !== 3) {
+        lastFailure = 'QUEST_CANDIDATE_SELECTION_FAILED'
+        continue
+      }
+      const { selectedQuestIds, ...reportFields } = parsed.data
+      void selectedQuestIds
+      const finalContent: WeeklyReportContent = {
+        ...reportFields,
+        missions: missionTuple(quests),
+        questCandidateIds: quests.map((quest) => quest.candidateId) as [string, string, string],
+      }
+      const wordCount = Object.values(finalContent)
         .flatMap((value) => Array.isArray(value) ? value : [value])
         .join(' ')
         .trim()
@@ -138,7 +166,8 @@ export async function generateWithGroq(payload: WeeklyReportPayload): Promise<Ge
       }
 
       return {
-        content: parsed.data,
+        content: finalContent,
+        quests,
         model,
         inputTokens: result.usage?.prompt_tokens ?? null,
         outputTokens: result.usage?.completion_tokens ?? null,
@@ -151,7 +180,11 @@ export async function generateWithGroq(payload: WeeklyReportPayload): Promise<Ge
   throw new Error(lastFailure)
 }
 
-export function deterministicReport(payload: WeeklyReportPayload): WeeklyReportContent {
+export function deterministicReport(
+  payload: WeeklyReportPayload,
+  candidates: PersonalQuestCandidate[] = []
+): WeeklyReportContent {
+  const quests = selectQuestCandidates(candidates)
   const strongest = [...payload.exerciseSummary]
     .sort((a, b) => (b.changeVsBaselinePct ?? b.totalReps + b.totalDurationSeconds) - (a.changeVsBaselinePct ?? a.totalReps + a.totalDurationSeconds))[0]
   const baselineText = payload.dataFlags.hasPersonalBaseline
@@ -173,11 +206,14 @@ export function deterministicReport(payload: WeeklyReportPayload): WeeklyReportC
       : `Sleep averaged ${payload.week.averageSleepHours} hours across ${payload.habitCoverage.sleepDays} logged days.`,
     exerciseInsight: baselineText,
     bodyGoalInsight: bodyText,
-    missions: [
+    missions: quests.length === 3 ? missionTuple(quests) : [
       `Log at least ${Math.max(3, payload.week.checkInDays)} days again next week.`,
       strongest ? `Repeat ${strongest.exercise} with controlled, consistent sets.` : 'Record exercise sets and repetitions clearly.',
       payload.habitCoverage.proteinDays < 3 ? 'Log protein on at least three days.' : 'Record sleep alongside each training day.',
     ],
+    questCandidateIds: quests.length === 3
+      ? quests.map((quest) => quest.candidateId) as [string, string, string]
+      : undefined,
     noxClosing: 'Steady records reveal the path forward, Hunter.',
   }
 }

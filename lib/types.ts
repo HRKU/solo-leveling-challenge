@@ -99,6 +99,7 @@ export interface WeeklyReportContent {
   exerciseInsight: string
   bodyGoalInsight: string
   missions: [string, string, string]
+  questCandidateIds?: [string, string, string]
   noxClosing: string
 }
 
@@ -115,6 +116,26 @@ export interface AiWeeklyReport {
   output_tokens?: number | null
   generation_started_at: string
   generated_at: string | null
+}
+
+export interface PersonalQuest {
+  id: string
+  user_id: string
+  source_report_id: string
+  quest_type: import('@/lib/personal-quests/selection').PersonalQuestType
+  parameters: Record<string, unknown>
+  title: string
+  description: string
+  target: number
+  progress: number
+  starts_on: string
+  ends_on: string
+  status: 'active' | 'completed' | 'expired'
+  xp_reward: number
+  completed_at: string | null
+  xp_awarded_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Challenge {
